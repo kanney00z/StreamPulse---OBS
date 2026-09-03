@@ -1,0 +1,6 @@
+{
+  "name": "StreamPulse - OBS Overlay & Alert Studio",
+  "description": "ระบบสร้างวิดเจ็ต OBS สตรีมเมอร์ระดับมืออาชีพ: Like Leaderboard, Chat Overlay หลากหลายธีม และ Gift Alert Overlay พร้อมลิงก์ Browser Source",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

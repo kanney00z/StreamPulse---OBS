@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Kanit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #020617;
+    color: #f8fafc;
+  }
+}
+
+/* OBS Browser Source Transparent Mode */
+body.obs-mode,
+html.obs-mode {
+  background-color: transparent !important;
+  background-image: none !important;
+  overflow: hidden !important;
+}
+
+/* Immersive UI Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(6, 182, 212, 0.3);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.6);
+}
+
+/* Custom text glow & animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px rgba(6, 182, 212, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 24px rgba(168, 85, 247, 0.7));
+  }
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(0.8) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-60px) scale(1.1) rotate(-8deg);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-130px) scale(0.9) rotate(12deg);
+    opacity: 0;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+.floating-heart {
+  animation: floatUp 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Comic halftone dot background */
+.comic-dots {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.2) 1.5px, transparent 1.5px);
+  background-size: 10px 10px;
+}
