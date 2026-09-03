@@ -9,8 +9,12 @@ import {
   IndoFinityChatEventData,
   IndoFinityLikeEventData,
   IndoFinityGiftEventData,
+  IndoFinityFollowEventData,
+  IndoFinityShareEventData,
   ChatMessage,
   GiftAlert,
+  FollowAlert,
+  ShareAlert,
   GiftItem,
   LikeUser,
 } from '../types';
@@ -21,6 +25,8 @@ export interface IndoFinityCallbacks {
   onChat?: (chatMessage: ChatMessage, raw: IndoFinityChatEventData) => void;
   onLike?: (data: { count: number; totalLikes?: number; user: LikeUser }, raw: IndoFinityLikeEventData) => void;
   onGift?: (alert: GiftAlert, raw: IndoFinityGiftEventData) => void;
+  onFollow?: (alert: FollowAlert, raw: IndoFinityFollowEventData) => void;
+  onShare?: (alert: ShareAlert, raw: IndoFinityShareEventData) => void;
   onStatusChange?: (status: IndoFinityConnectionStatus) => void;
   onLog?: (log: IndoFinityLogItem) => void;
 }
@@ -392,14 +398,51 @@ export class IndoFinityClient {
     else if (event === 'follow') {
       const uniqueId = eventData?.uniqueId || 'viewer';
       const nickname = eventData?.nickname || `@${uniqueId}`;
+      const avatarUrl =
+        eventData?.profilePictureUrl ||
+        eventData?.avatarThumb ||
+        eventData?.avatar ||
+        `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80`;
+
+      const followAlert: FollowAlert = {
+        id: 'follow-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        username: nickname,
+        avatarUrl,
+        timestamp: Date.now(),
+        uniqueId,
+      };
+
       this.addLog('follow', `@${uniqueId} ได้เริ่มติดตามไลฟ์สดนี้! ❤️`, nickname, eventData);
+
+      if (this.callbacks.onFollow) {
+        this.callbacks.onFollow(followAlert, eventData);
+      }
     }
 
     // 5. Share Event
     else if (event === 'share') {
       const uniqueId = eventData?.uniqueId || 'viewer';
       const nickname = eventData?.nickname || `@${uniqueId}`;
+      const avatarUrl =
+        eventData?.profilePictureUrl ||
+        eventData?.avatarThumb ||
+        eventData?.avatar ||
+        `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80`;
+
+      const shareAlert: ShareAlert = {
+        id: 'share-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        username: nickname,
+        avatarUrl,
+        timestamp: Date.now(),
+        shareCount: eventData?.shareCount || 1,
+        uniqueId,
+      };
+
       this.addLog('share', `@${uniqueId} ได้แชร์ไลฟ์สดนี้ไปยังเพื่อนๆ! 📢`, nickname, eventData);
+
+      if (this.callbacks.onShare) {
+        this.callbacks.onShare(shareAlert, eventData);
+      }
     }
 
     // 6. Member / Join Event
@@ -416,7 +459,7 @@ export class IndoFinityClient {
   }
 
   // Simulation method to test IndoFinity events without needing the app running
-  public simulateEvent(event: 'chat' | 'like' | 'gift') {
+  public simulateEvent(event: 'chat' | 'like' | 'gift' | 'follow' | 'share') {
     if (event === 'chat') {
       const mockChats = [
         { uniqueId: 'tiktok_fan_th', comment: 'ทักทายครับพี่สตรีมเมอร์ ติดตามอยู่น้าา 💖' },
@@ -459,6 +502,34 @@ export class IndoFinityClient {
         giftName: pick.giftName,
         diamondCount: pick.diamondCount,
         repeatCount: pick.repeatCount,
+      });
+    } else if (event === 'follow') {
+      const users = [
+        { uniqueId: 'somying_cute', nickname: 'น้องสมหญิง ใจดี 🌸' },
+        { uniqueId: 'cyber_runner', nickname: 'CyberRunner99 ⚡' },
+        { uniqueId: 'tiktok_fan_th', nickname: 'TikToker Thailand ❤️' },
+        { uniqueId: 'game_master_x', nickname: 'GameMaster_X 🎮' },
+        { uniqueId: 'ice_bubble', nickname: 'ไอซ์ซี่ แมวส้ม 🐾' },
+      ];
+      const pick = users[Math.floor(Math.random() * users.length)];
+      this.handleIncomingEvent('follow', {
+        uniqueId: pick.uniqueId,
+        nickname: pick.nickname,
+        profilePictureUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+      });
+    } else if (event === 'share') {
+      const users = [
+        { uniqueId: 'ball_street', nickname: 'พี่บอล สตรีท 📢' },
+        { uniqueId: 'nong_ploy', nickname: 'น้องพลอย สายซัพ 💖' },
+        { uniqueId: 'bank_stream', nickname: 'BankShareOfficial 🔥' },
+        { uniqueId: 'mew_mew', nickname: 'หมิวหมิว ใจฟู ✨' },
+      ];
+      const pick = users[Math.floor(Math.random() * users.length)];
+      this.handleIncomingEvent('share', {
+        uniqueId: pick.uniqueId,
+        nickname: pick.nickname,
+        profilePictureUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+        shareCount: 1,
       });
     }
   }

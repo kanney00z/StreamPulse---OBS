@@ -183,6 +183,84 @@ class SoundEngine {
       osc.stop(now + 0.16);
     } catch {}
   }
+
+  // Follow sound: warm welcoming high sparkle chime (C5 -> E5 -> G5 -> C6)
+  playFollow() {
+    if (!this.enabled) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+
+      notes.forEach((freq, idx) => {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+
+        const startTime = now + idx * 0.07;
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.22 * this.volume, startTime + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + 0.36);
+      });
+    } catch {}
+  }
+
+  // Share sound: energetic whoosh and bright bell chime (F5 -> A5 -> D6)
+  playShare() {
+    if (!this.enabled) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+
+      // 1. Rising whoosh sweep
+      const sweepOsc = this.ctx.createOscillator();
+      const sweepGain = this.ctx.createGain();
+      sweepOsc.type = 'triangle';
+      sweepOsc.frequency.setValueAtTime(320, now);
+      sweepOsc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+      sweepGain.gain.setValueAtTime(0.12 * this.volume, now);
+      sweepGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      sweepOsc.connect(sweepGain);
+      sweepGain.connect(this.ctx.destination);
+      sweepOsc.start(now);
+      sweepOsc.stop(now + 0.15);
+
+      // 2. Bright double chime
+      const bellNotes = [698.46, 880.0, 1174.66]; // F5, A5, D6
+      bellNotes.forEach((freq, idx) => {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + 0.08 + idx * 0.08);
+
+        const startTime = now + 0.08 + idx * 0.08;
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.2 * this.volume, startTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.38);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + 0.4);
+      });
+    } catch {}
+  }
 }
 
 export const sounds = new SoundEngine();

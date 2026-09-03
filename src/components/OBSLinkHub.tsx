@@ -13,6 +13,9 @@ import {
   MonitorPlay,
   Radio,
   Wifi,
+  UserPlus,
+  Share2,
+  Bell,
 } from 'lucide-react';
 import { OverlayCustomSettings, ChatThemeId } from '../types';
 import { CHAT_THEMES } from '../data/mockData';
@@ -20,7 +23,7 @@ import { CHAT_THEMES } from '../data/mockData';
 interface OBSLinkHubProps {
   settings: OverlayCustomSettings;
   onUpdateSettings: (newSettings: Partial<OverlayCustomSettings>) => void;
-  onSelectPreviewTab: (tab: 'chat' | 'leaderboard' | 'gift' | 'all') => void;
+  onSelectPreviewTab: (tab: 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'alerts' | 'all') => void;
   onSelectIndoFinityTab?: () => void;
 }
 
@@ -36,7 +39,7 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
   // Get current window origin or fallback
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
-  const getOverlayUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'all') => {
+  const getOverlayUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'all') => {
     const params = new URLSearchParams();
     params.set('mode', 'overlay');
     params.set('overlay', type);
@@ -51,7 +54,9 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
         params.set('tts', '1');
         params.set('ttsformat', settings.chatTtsFormat);
         params.set('ttsspeed', settings.chatTtsSpeed.toString());
+        params.set('ttspitch', settings.chatTtsPitch.toString());
         params.set('ttsvol', settings.chatTtsVolume.toString());
+        params.set('ttssweet', settings.chatTtsSweetEnding ? '1' : '0');
       }
     }
 
@@ -62,9 +67,23 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
       params.set('showgoal', settings.likeShowGoalBar ? '1' : '0');
     }
 
-    if (type === 'gift' || type === 'all') {
+    if (type === 'gift' || type === 'alerts' || type === 'all') {
       params.set('duration', settings.giftDuration.toString());
       params.set('particles', settings.giftShowParticles ? '1' : '0');
+    }
+
+    if (type === 'follow' || type === 'alerts' || type === 'all') {
+      params.set('follow', settings.followAlertEnabled ? '1' : '0');
+      params.set('followtts', settings.followTtsEnabled ? '1' : '0');
+      params.set('followdur', settings.followDuration.toString());
+      params.set('followstyle', settings.followStyle);
+    }
+
+    if (type === 'share' || type === 'alerts' || type === 'all') {
+      params.set('share', settings.shareAlertEnabled ? '1' : '0');
+      params.set('sharetts', settings.shareTtsEnabled ? '1' : '0');
+      params.set('sharedur', settings.shareDuration.toString());
+      params.set('sharestyle', settings.shareStyle);
     }
 
     return `${origin}?${params.toString()}`;
@@ -340,8 +359,8 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
                   onChange={(e) => onUpdateSettings({ chatTtsEnabled: e.target.checked })}
                   className="rounded accent-cyan-400"
                 />
-                <span className={settings.chatTtsEnabled ? 'text-emerald-400 font-bold' : 'text-slate-400'}>
-                  🔊 อ่านแชทสด (TTS {settings.chatTtsEnabled ? 'ON' : 'OFF'})
+                <span className={settings.chatTtsEnabled ? 'text-pink-300 font-bold' : 'text-slate-400'}>
+                  🌸 อ่านแชทเสียงหวานใส ({settings.chatTtsEnabled ? 'ON' : 'OFF'})
                 </span>
               </label>
             </div>
@@ -483,6 +502,226 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
             </button>
             <a
               href={getOverlayUrl('gift')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-1.5 text-center text-slate-400 hover:text-slate-200 text-xs flex items-center justify-center gap-1 transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              <span>เปิดทดสอบ</span>
+            </a>
+          </div>
+        </div>
+
+        {/* Card 4: Follow Alert Overlay */}
+        <div className="p-5 rounded-3xl bg-slate-900/80 border border-white/10 hover:border-pink-500/50 flex flex-col lg:flex-row items-start lg:items-center gap-6 relative group overflow-hidden transition-all shadow-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+          {/* Mini Mock Screen */}
+          <div className="w-full sm:w-44 h-28 bg-slate-950 rounded-xl border border-white/10 flex flex-col items-center justify-center relative overflow-hidden shrink-0 p-2.5">
+            <div className="text-3xl text-pink-400 animate-bounce mb-1">💖</div>
+            <div className="text-[10px] font-bold text-pink-300 bg-pink-500/20 px-2 py-0.5 rounded-full border border-pink-500/30">
+              NEW FOLLOWER!
+            </div>
+            <div className="absolute bottom-1 right-2 text-[9px] font-mono text-slate-500">460x180</div>
+          </div>
+
+          {/* Card Info & Customizer */}
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-pink-400 text-xs font-bold uppercase tracking-widest">Community • หมวดหมู่ 4</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/10 text-pink-300 border border-pink-500/20 font-bold">
+                เสียงไทยหวานใส
+              </span>
+            </div>
+            <h4 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-pink-400" />
+              4. Follow Alert (แจ้งเตือนผู้ติดตามใหม่)
+            </h4>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              แจ้งเตือนคนกดติดตามแบบเรียลไทม์ ป้ายแบนเนอร์ประกายวิ้งวับ พร้อมเสียงกระดิ่งคริสตัลใส และเสียงพูดไทยหวานใสขอบคุณอัตโนมัติ
+            </p>
+
+            <div className="flex items-center gap-4 text-xs pt-1 flex-wrap text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <span>ระยะเวลา:</span>
+                <select
+                  value={settings.followDuration}
+                  onChange={(e) =>
+                    onUpdateSettings({
+                      followDuration: Number(e.target.value),
+                    })
+                  }
+                  className="bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-pink-400"
+                >
+                  <option value={3}>3 วินาที</option>
+                  <option value={4}>4 วินาที</option>
+                  <option value={6}>6 วินาที</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span>เสียงพูดหวานใส:</span>
+                <button
+                  onClick={() =>
+                    onUpdateSettings({
+                      followTtsEnabled: !settings.followTtsEnabled,
+                    })
+                  }
+                  className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                    settings.followTtsEnabled
+                      ? 'bg-pink-500/20 text-pink-300 border border-pink-500/30'
+                      : 'bg-slate-950 text-slate-400 border border-white/10'
+                  }`}
+                >
+                  {settings.followTtsEnabled ? 'เปิดเสียงพูด' : 'ปิดเสียง'}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span>ขนาดแนะนำ:</span>
+                <span className="font-mono text-[11px] text-pink-300 bg-pink-400/10 px-2 py-0.5 rounded border border-pink-400/20">
+                  480 × 200 px
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-row lg:flex-col gap-2 w-full lg:w-auto shrink-0 justify-end">
+            <button
+              onClick={() => onSelectPreviewTab('follow')}
+              className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>Customize</span>
+            </button>
+            <button
+              onClick={() => copyToClipboard(getOverlayUrl('follow'), 'follow')}
+              className="px-4 py-2 bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 text-pink-400 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(244,63,94,0.15)] cursor-pointer"
+            >
+              {copiedKey === 'follow' ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
+                  <span className="text-emerald-400">คัดลอกสำเร็จ!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  <span>Copy Follow Link</span>
+                </>
+              )}
+            </button>
+            <a
+              href={getOverlayUrl('follow')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-1.5 text-center text-slate-400 hover:text-slate-200 text-xs flex items-center justify-center gap-1 transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              <span>เปิดทดสอบ</span>
+            </a>
+          </div>
+        </div>
+
+        {/* Card 5: Share Alert Overlay */}
+        <div className="p-5 rounded-3xl bg-slate-900/80 border border-white/10 hover:border-teal-500/50 flex flex-col lg:flex-row items-start lg:items-center gap-6 relative group overflow-hidden transition-all shadow-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-teal-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+          {/* Mini Mock Screen */}
+          <div className="w-full sm:w-44 h-28 bg-slate-950 rounded-xl border border-white/10 flex flex-col items-center justify-center relative overflow-hidden shrink-0 p-2.5">
+            <div className="text-3xl text-teal-400 animate-pulse mb-1">🚀</div>
+            <div className="text-[10px] font-bold text-teal-300 bg-teal-500/20 px-2 py-0.5 rounded-full border border-teal-500/30">
+              SHARED LIVE!
+            </div>
+            <div className="absolute bottom-1 right-2 text-[9px] font-mono text-slate-500">460x180</div>
+          </div>
+
+          {/* Card Info & Customizer */}
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-teal-400 text-xs font-bold uppercase tracking-widest">Viral • หมวดหมู่ 5</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/20 font-bold">
+                แชร์ไลฟ์สด
+              </span>
+            </div>
+            <h4 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-teal-400" />
+              5. Share Alert (แจ้งเตือนคนกดแชร์ไลฟ์)
+            </h4>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              แจ้งเตือนคนกดแชร์ไลฟ์สด เพิ่มเอนเกจเมนต์และขอบคุณคนดูให้ช่วยดันช่อง มีเสียงระฆังแก้วกังวานและเสียงหวานใสขอบคุณ
+            </p>
+
+            <div className="flex items-center gap-4 text-xs pt-1 flex-wrap text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <span>ระยะเวลา:</span>
+                <select
+                  value={settings.shareDuration}
+                  onChange={(e) =>
+                    onUpdateSettings({
+                      shareDuration: Number(e.target.value),
+                    })
+                  }
+                  className="bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-teal-400"
+                >
+                  <option value={3}>3 วินาที</option>
+                  <option value={4}>4 วินาที</option>
+                  <option value={6}>6 วินาที</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span>เสียงพูดหวานใส:</span>
+                <button
+                  onClick={() =>
+                    onUpdateSettings({
+                      shareTtsEnabled: !settings.shareTtsEnabled,
+                    })
+                  }
+                  className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                    settings.shareTtsEnabled
+                      ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                      : 'bg-slate-950 text-slate-400 border border-white/10'
+                  }`}
+                >
+                  {settings.shareTtsEnabled ? 'เปิดเสียงพูด' : 'ปิดเสียง'}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span>ขนาดแนะนำ:</span>
+                <span className="font-mono text-[11px] text-teal-300 bg-teal-400/10 px-2 py-0.5 rounded border border-teal-400/20">
+                  480 × 200 px
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-row lg:flex-col gap-2 w-full lg:w-auto shrink-0 justify-end">
+            <button
+              onClick={() => onSelectPreviewTab('share')}
+              className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>Customize</span>
+            </button>
+            <button
+              onClick={() => copyToClipboard(getOverlayUrl('share'), 'share')}
+              className="px-4 py-2 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-400 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(20,184,166,0.15)] cursor-pointer"
+            >
+              {copiedKey === 'share' ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
+                  <span className="text-emerald-400">คัดลอกสำเร็จ!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  <span>Copy Share Link</span>
+                </>
+              )}
+            </button>
+            <a
+              href={getOverlayUrl('share')}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-1.5 text-center text-slate-400 hover:text-slate-200 text-xs flex items-center justify-center gap-1 transition-colors"

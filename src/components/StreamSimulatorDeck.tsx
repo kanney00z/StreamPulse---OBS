@@ -11,6 +11,8 @@ import {
   Send,
   Sparkles,
   Flame,
+  UserPlus,
+  Share2,
 } from 'lucide-react';
 import { GIFT_ITEMS, SIMULATION_NAMES, RANDOM_CHAT_PHRASES } from '../data/mockData';
 import { GiftItem } from '../types';
@@ -19,6 +21,10 @@ interface StreamSimulatorDeckProps {
   onAddLikes: (count: number) => void;
   onSendChat: (customText?: string) => void;
   onSendGift: (gift: GiftItem, combo?: number) => void;
+  onSendFollow?: (username?: string) => void;
+  onSendShare?: (username?: string) => void;
+  streamFollowCount?: number;
+  streamShareCount?: number;
   isAutoSimulating: boolean;
   onToggleAutoSim: () => void;
   soundEnabled: boolean;
@@ -32,6 +38,10 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
   onAddLikes,
   onSendChat,
   onSendGift,
+  onSendFollow,
+  onSendShare,
+  streamFollowCount = 0,
+  streamShareCount = 0,
   isAutoSimulating,
   onToggleAutoSim,
   soundEnabled,
@@ -142,8 +152,8 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
         </div>
       </div>
 
-      {/* 3 Categories Action Rows */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* 4 Action Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. Like Controls */}
         <div className="bg-slate-950/70 border border-white/10 rounded-2xl p-4 flex flex-col justify-between">
           <div>
@@ -234,11 +244,11 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
                 <button
                   type="button"
                   onClick={onTestTts}
-                  className="py-1.5 px-2 rounded-xl bg-slate-900 border border-white/10 hover:border-emerald-400 hover:bg-emerald-500/10 text-emerald-300 text-xs font-semibold transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer"
-                  title="ทดสอบอ่านออกเสียง TTS"
+                  className="py-1.5 px-2 rounded-xl bg-slate-900 border border-pink-500/30 hover:border-pink-400 hover:bg-pink-500/10 text-pink-300 text-xs font-semibold transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer"
+                  title="ทดสอบอ่านออกเสียง TTS ภาษาไทยโทนหวานใส"
                 >
-                  <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
-                  ทดสอบเสียงอ่าน
+                  <Volume2 className="w-3.5 h-3.5 text-pink-400" />
+                  🌸 ฟังเสียงหวานใส
                 </button>
               )}
             </div>
@@ -279,6 +289,60 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
                 </div>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* 4. Follow & Share Controls */}
+        <div className="bg-slate-950/70 border border-white/10 rounded-2xl p-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-pink-400 flex items-center gap-1.5">
+                <UserPlus className="w-4 h-4 text-pink-400" />
+                4. ติดตาม & แชร์ (Follow / Share)
+              </span>
+              <span className="text-[10px] bg-purple-500/15 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/20 font-bold">
+                ใหม่
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mb-2">
+              จำลองแจ้งเตือนคนกดติดตาม และกดแชร์ไลฟ์สด
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => onSendFollow && onSendFollow()}
+                className="py-2 px-2 rounded-xl bg-pink-600/20 border border-pink-500/40 hover:border-pink-400 hover:bg-pink-500/30 text-pink-200 text-xs font-bold transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer shadow-sm"
+                title="ทดสอบคนกดติดตาม พร้อมเสียงกระดิ่ง และเสียงหวานใสทักทาย"
+              >
+                <UserPlus className="w-3.5 h-3.5 text-pink-400" />
+                + ติดตาม
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onSendShare && onSendShare()}
+                className="py-2 px-2 rounded-xl bg-teal-600/20 border border-teal-500/40 hover:border-teal-400 hover:bg-teal-500/30 text-teal-200 text-xs font-bold transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer shadow-sm"
+                title="ทดสอบคนกดแชร์ไลฟ์ พร้อมเสียงกระดิ่ง และเสียงหวานใสขอบคุณ"
+              >
+                <Share2 className="w-3.5 h-3.5 text-teal-400" />
+                + แชร์ไลฟ์
+              </button>
+            </div>
+
+            {/* Counters Badge */}
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-900 border border-white/5 text-[11px] text-slate-400">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-pink-400" />
+                ติดตาม: <strong className="text-pink-300 font-bold">{streamFollowCount}</strong>
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-teal-400" />
+                แชร์: <strong className="text-teal-300 font-bold">{streamShareCount}</strong>
+              </span>
+            </div>
           </div>
         </div>
       </div>

@@ -23,10 +23,14 @@ import {
   Tv,
   Eye,
   ExternalLink,
+  UserPlus,
+  Share2,
 } from 'lucide-react';
 import {
   ChatMessage,
   GiftAlert,
+  FollowAlert,
+  ShareAlert,
   LikeUser,
   OverlayCustomSettings,
   FloatingHeartItem,
@@ -45,6 +49,7 @@ import {
 import { ChatOverlayWidget } from './components/ChatOverlayWidget';
 import { LikeLeaderboardWidget } from './components/LikeLeaderboardWidget';
 import { GiftOverlayWidget } from './components/GiftOverlayWidget';
+import { FollowShareOverlayWidget } from './components/FollowShareOverlayWidget';
 import { StreamSimulatorDeck } from './components/StreamSimulatorDeck';
 import { OBSLinkHub } from './components/OBSLinkHub';
 import { ThemeSelector } from './components/ThemeSelector';
@@ -58,12 +63,12 @@ import { ttsService } from './utils/ttsService';
 export default function App() {
   // Check if opened as standalone OBS Browser Source overlay
   const [isOverlayMode, setIsOverlayMode] = useState(false);
-  const [overlayType, setOverlayType] = useState<'leaderboard' | 'chat' | 'gift' | 'all'>('all');
+  const [overlayType, setOverlayType] = useState<'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'all'>('all');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const mode = params.get('mode');
-    const overlay = params.get('overlay') as 'leaderboard' | 'chat' | 'gift' | 'all';
+    const overlay = params.get('overlay') as 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'all';
 
     if (mode === 'overlay' || overlay) {
       setIsOverlayMode(true);
@@ -82,13 +87,16 @@ export default function App() {
     chatSoundEnabled: true,
     chatMaxMessages: 12,
 
-    // TTS (Text-to-Speech อ่านแชทสดอัตโนมัติ)
+    // TTS (Text-to-Speech อ่านแชทสดอัตโนมัติ เสียงหวานใส)
     chatTtsEnabled: true,
-    chatTtsFormat: 'nameAndMessage',
+    chatTtsFormat: 'sweet',
     chatTtsSpeed: 1.05,
+    chatTtsPitch: 1.22,
     chatTtsVolume: 90,
     chatTtsVoice: 'default',
+    chatTtsTonePreset: 'sweet',
     chatTtsSkipSpam: true,
+    chatTtsSweetEnding: true,
 
     likeGoal: 20000,
     currentLikes: 14280,
@@ -103,6 +111,23 @@ export default function App() {
     giftShowParticles: true,
     giftMinCoinFilter: 1,
     giftStyle: 'banner-epic',
+
+    // Follow Alert
+    followAlertEnabled: true,
+    followSoundEnabled: true,
+    followTtsEnabled: true,
+    followDuration: 4,
+    followStyle: 'neon-banner',
+
+    // Share Alert
+    shareAlertEnabled: true,
+    shareSoundEnabled: true,
+    shareTtsEnabled: true,
+    shareDuration: 4,
+    shareStyle: 'neon-banner',
+
+    streamFollowCount: 0,
+    streamShareCount: 0,
   });
 
   // Live widgets state
@@ -111,10 +136,12 @@ export default function App() {
   const [totalLikes, setTotalLikes] = useState<number>(14280);
   const [recentHearts, setRecentHearts] = useState<FloatingHeartItem[]>([]);
   const [currentGiftAlert, setCurrentGiftAlert] = useState<GiftAlert | null>(null);
+  const [currentFollowAlert, setCurrentFollowAlert] = useState<FollowAlert | null>(null);
+  const [currentShareAlert, setCurrentShareAlert] = useState<ShareAlert | null>(null);
 
   // Studio UI state
   const [activeTab, setActiveTab] = useState<'studio' | 'themes' | 'links' | 'indofinity'>('studio');
-  const [activeWidgetView, setActiveWidgetView] = useState<'all' | 'chat' | 'leaderboard' | 'gift'>('all');
+  const [activeWidgetView, setActiveWidgetView] = useState<'all' | 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'alerts'>('all');
   const [canvasAspect, setCanvasAspect] = useState<'16:9' | '9:16'>('16:9');
   const [canvasBg, setCanvasBg] = useState<'gaming' | 'lofi' | 'dark' | 'transparent'>('gaming');
   const [isAutoSimulating, setIsAutoSimulating] = useState(false);
@@ -127,6 +154,8 @@ export default function App() {
   const [indoFinityLogs, setIndoFinityLogs] = useState<IndoFinityLogItem[]>([]);
 
   const giftTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const followTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const shareTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoSimIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync sound mute/unmute and TTS settings
@@ -138,9 +167,11 @@ export default function App() {
       enabled: settings.chatTtsEnabled && soundEnabled,
       format: settings.chatTtsFormat,
       rate: settings.chatTtsSpeed,
+      pitch: settings.chatTtsPitch,
       volume: settings.chatTtsVolume,
       voiceURI: settings.chatTtsVoice,
       cleanSpam: settings.chatTtsSkipSpam,
+      sweetEnding: settings.chatTtsSweetEnding,
     });
   }, [settings, soundEnabled]);
 
@@ -255,6 +286,70 @@ export default function App() {
     }, settings.giftDuration * 1000);
   };
 
+  // Action: Handle Follow Alert
+  const handleFollowAlert = (alert: FollowAlert) => {
+    if (settingsRef.current.followSoundEnabled && soundEnabled) {
+      sounds.playFollow();
+    }
+    setCurrentFollowAlert(alert);
+    setSettings((prev) => ({ ...prev, streamFollowCount: prev.streamFollowCount + 1 }));
+
+    if (settingsRef.current.followTtsEnabled && settingsRef.current.chatTtsEnabled && soundEnabled) {
+      ttsService.speakFollow(alert.username);
+    }
+
+    if (followTimeoutRef.current) clearTimeout(followTimeoutRef.current);
+    followTimeoutRef.current = setTimeout(() => {
+      setCurrentFollowAlert(null);
+    }, settings.followDuration * 1000);
+  };
+
+  // Action: Handle Share Alert
+  const handleShareAlert = (alert: ShareAlert) => {
+    if (settingsRef.current.shareSoundEnabled && soundEnabled) {
+      sounds.playShare();
+    }
+    setCurrentShareAlert(alert);
+    setSettings((prev) => ({
+      ...prev,
+      streamShareCount: prev.streamShareCount + (alert.shareCount || 1),
+    }));
+
+    if (settingsRef.current.shareTtsEnabled && settingsRef.current.chatTtsEnabled && soundEnabled) {
+      ttsService.speakShare(alert.username);
+    }
+
+    if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+    shareTimeoutRef.current = setTimeout(() => {
+      setCurrentShareAlert(null);
+    }, settings.shareDuration * 1000);
+  };
+
+  // Action: Send Test Follow
+  const handleSendTestFollow = (username?: string) => {
+    const randomUser = SIMULATION_NAMES[Math.floor(Math.random() * SIMULATION_NAMES.length)];
+    handleFollowAlert({
+      id: 'follow-' + Date.now(),
+      username: username || randomUser.name,
+      avatarUrl: randomUser.avatar,
+      timestamp: Date.now(),
+      uniqueId: (username || randomUser.name).toLowerCase().replace(/\s+/g, '_'),
+    });
+  };
+
+  // Action: Send Test Share
+  const handleSendTestShare = (username?: string) => {
+    const randomUser = SIMULATION_NAMES[Math.floor(Math.random() * SIMULATION_NAMES.length)];
+    handleShareAlert({
+      id: 'share-' + Date.now(),
+      username: username || randomUser.name,
+      avatarUrl: randomUser.avatar,
+      timestamp: Date.now(),
+      shareCount: 1,
+      uniqueId: (username || randomUser.name).toLowerCase().replace(/\s+/g, '_'),
+    });
+  };
+
   // Setup IndoFinity Client listeners
   useEffect(() => {
     const client = indoFinityClientRef.current;
@@ -275,6 +370,12 @@ export default function App() {
       onGift: (alert) => {
         handleSendGift(alert.gift, alert.comboCount, alert.senderName, alert.senderAvatar);
       },
+      onFollow: (alert) => {
+        handleFollowAlert(alert);
+      },
+      onShare: (alert) => {
+        handleShareAlert(alert);
+      },
     });
 
     // Auto connect to ws://localhost:62024
@@ -283,7 +384,7 @@ export default function App() {
     return () => {
       // Don't kill client permanently, just unhook if unmounted
     };
-  }, [settings.giftDuration]);
+  }, [settings.giftDuration, settings.followDuration, settings.shareDuration]);
 
   // Auto stream simulation loop
   useEffect(() => {
@@ -294,13 +395,17 @@ export default function App() {
 
     autoSimIntervalRef.current = setInterval(() => {
       const rand = Math.random();
-      if (rand < 0.5) {
+      if (rand < 0.4) {
         handleAddLikes(Math.floor(5 + Math.random() * 20));
-      } else if (rand < 0.85) {
+      } else if (rand < 0.7) {
         handleSendChat();
-      } else {
+      } else if (rand < 0.85) {
         const randomGift = GIFT_ITEMS[Math.floor(Math.random() * GIFT_ITEMS.length)];
         handleSendGift(randomGift, Math.floor(1 + Math.random() * 4));
+      } else if (rand < 0.93) {
+        handleSendTestFollow();
+      } else {
+        handleSendTestShare();
       }
     }, 2800);
 
@@ -313,7 +418,7 @@ export default function App() {
     setSettings((prev) => ({ ...prev, ...partial }));
   };
 
-  const copyWidgetUrl = (type: 'leaderboard' | 'chat' | 'gift') => {
+  const copyWidgetUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts') => {
     const origin = window.location.origin;
     const url = `${origin}?mode=overlay&overlay=${type}`;
     navigator.clipboard.writeText(url).then(() => {
@@ -511,6 +616,28 @@ export default function App() {
                   <Gift className="w-3.5 h-3.5" />
                   3. Gift Overlay
                 </button>
+                <button
+                  onClick={() => setActiveWidgetView('follow')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeWidgetView === 'follow'
+                      ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40 shadow-[0_0_15px_rgba(244,63,94,0.2)]'
+                      : 'bg-slate-950 text-slate-400 hover:text-white border border-white/10'
+                  }`}
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  4. Follow Alert
+                </button>
+                <button
+                  onClick={() => setActiveWidgetView('share')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeWidgetView === 'share'
+                      ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-[0_0_15px_rgba(20,184,166,0.2)]'
+                      : 'bg-slate-950 text-slate-400 hover:text-white border border-white/10'
+                  }`}
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  5. Share Alert
+                </button>
               </div>
 
               {/* Canvas Aspect Ratio & Mock Background */}
@@ -604,6 +731,22 @@ export default function App() {
                         </div>
                       )}
                     </div>
+
+                    {/* Follow & Share Alert Placed at Center / Top */}
+                    {(activeWidgetView === 'all' || activeWidgetView === 'follow' || activeWidgetView === 'share' || activeWidgetView === 'alerts') && (
+                      <div
+                        className={`absolute inset-x-0 top-16 sm:top-20 flex justify-center pointer-events-none z-30 ${
+                          activeWidgetView === 'follow' || activeWidgetView === 'share' ? 'my-auto' : ''
+                        }`}
+                      >
+                        <FollowShareOverlayWidget
+                          currentFollow={currentFollowAlert}
+                          currentShare={currentShareAlert}
+                          settings={settings}
+                          mode={activeWidgetView === 'follow' ? 'follow-only' : activeWidgetView === 'share' ? 'share-only' : 'both'}
+                        />
+                      </div>
+                    )}
 
                     {/* Bottom Row: Chat Overlay */}
                     {(activeWidgetView === 'all' || activeWidgetView === 'chat') && (
@@ -725,27 +868,48 @@ export default function App() {
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
                       คัดลอกลิงก์ OBS ของวิดเจ็ตที่เลือก:
                     </span>
-                    <div className="grid grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                       <button
                         onClick={() => copyWidgetUrl('leaderboard')}
                         className="py-1.5 px-2 rounded-xl bg-slate-950 border border-pink-500/30 hover:border-pink-400 text-pink-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(244,63,94,0.2)]"
                         title="คัดลอกลิงก์ Like Leaderboard"
                       >
-                        {copiedKey === 'leaderboard' ? '✓ คัดลอกแล้ว' : '1. Like Link'}
+                        {copiedKey === 'leaderboard' ? '✓ คัดลอกแล้ว' : '1. Like'}
                       </button>
                       <button
                         onClick={() => copyWidgetUrl('chat')}
                         className="py-1.5 px-2 rounded-xl bg-slate-950 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(6,182,212,0.2)]"
                         title="คัดลอกลิงก์ Chat Overlay"
                       >
-                        {copiedKey === 'chat' ? '✓ คัดลอกแล้ว' : '2. Chat Link'}
+                        {copiedKey === 'chat' ? '✓ คัดลอกแล้ว' : '2. Chat'}
                       </button>
                       <button
                         onClick={() => copyWidgetUrl('gift')}
                         className="py-1.5 px-2 rounded-xl bg-slate-950 border border-amber-500/30 hover:border-amber-400 text-amber-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(245,158,11,0.2)]"
                         title="คัดลอกลิงก์ Gift Overlay"
                       >
-                        {copiedKey === 'gift' ? '✓ คัดลอกแล้ว' : '3. Gift Link'}
+                        {copiedKey === 'gift' ? '✓ คัดลอกแล้ว' : '3. Gift'}
+                      </button>
+                      <button
+                        onClick={() => copyWidgetUrl('follow')}
+                        className="py-1.5 px-2 rounded-xl bg-slate-950 border border-pink-500/30 hover:border-pink-400 text-pink-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(244,63,94,0.2)]"
+                        title="คัดลอกลิงก์ Follow Alert"
+                      >
+                        {copiedKey === 'follow' ? '✓ คัดลอกแล้ว' : '4. Follow'}
+                      </button>
+                      <button
+                        onClick={() => copyWidgetUrl('share')}
+                        className="py-1.5 px-2 rounded-xl bg-slate-950 border border-teal-500/30 hover:border-teal-400 text-teal-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(20,184,166,0.2)]"
+                        title="คัดลอกลิงก์ Share Alert"
+                      >
+                        {copiedKey === 'share' ? '✓ คัดลอกแล้ว' : '5. Share'}
+                      </button>
+                      <button
+                        onClick={() => copyWidgetUrl('alerts')}
+                        className="py-1.5 px-2 rounded-xl bg-slate-950 border border-purple-500/30 hover:border-purple-400 text-purple-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(168,85,247,0.2)]"
+                        title="คัดลอกลิงก์ Alerts Bundle (Gift+Follow+Share)"
+                      >
+                        {copiedKey === 'alerts' ? '✓ คัดลอกแล้ว' : '6. All Alerts'}
                       </button>
                     </div>
                   </div>
@@ -778,6 +942,10 @@ export default function App() {
               onAddLikes={handleAddLikes}
               onSendChat={handleSendChat}
               onSendGift={handleSendGift}
+              onSendFollow={handleSendTestFollow}
+              onSendShare={handleSendTestShare}
+              streamFollowCount={settings.streamFollowCount}
+              streamShareCount={settings.streamShareCount}
               isAutoSimulating={isAutoSimulating}
               onToggleAutoSim={() => setIsAutoSimulating((prev) => !prev)}
               soundEnabled={soundEnabled}

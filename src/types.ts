@@ -84,6 +84,23 @@ export interface GiftAlert {
   timestamp: number;
 }
 
+export interface FollowAlert {
+  id: string;
+  username: string;
+  avatarUrl: string;
+  timestamp: number;
+  uniqueId?: string;
+}
+
+export interface ShareAlert {
+  id: string;
+  username: string;
+  avatarUrl: string;
+  timestamp: number;
+  shareCount?: number;
+  uniqueId?: string;
+}
+
 export interface OverlayCustomSettings {
   // Chat
   chatTheme: ChatThemeId;
@@ -95,13 +112,16 @@ export interface OverlayCustomSettings {
   chatSoundEnabled: boolean;
   chatMaxMessages: number;
 
-  // TTS (Text-to-Speech อ่านแชทสดอัตโนมัติ)
+  // TTS (Text-to-Speech อ่านแชทสดอัตโนมัติ เสียงหวานใส)
   chatTtsEnabled: boolean;
-  chatTtsFormat: 'nameAndMessage' | 'messageOnly';
+  chatTtsFormat: 'sweet' | 'nameAndMessage' | 'messageOnly';
   chatTtsSpeed: number; // 0.8 - 1.5
+  chatTtsPitch: number; // 0.8 - 1.6 (1.20 - 1.25 ให้เสียงหวานใส)
   chatTtsVolume: number; // 0 - 100
   chatTtsVoice: string; // 'default' or voiceURI
+  chatTtsTonePreset: 'sweet' | 'cute' | 'soft' | 'natural' | 'custom';
   chatTtsSkipSpam: boolean;
+  chatTtsSweetEnding: boolean; // เติมเสียงลงท้ายน่ารัก เช่น "ค่า~"
 
   // Like Leaderboard
   likeGoal: number;
@@ -118,6 +138,24 @@ export interface OverlayCustomSettings {
   giftShowParticles: boolean;
   giftMinCoinFilter: number;
   giftStyle: 'banner-epic' | 'card-hologram' | 'minimal-modern' | 'kawaii-pop';
+
+  // Follow Alert (คนกดติดตาม)
+  followAlertEnabled: boolean;
+  followSoundEnabled: boolean;
+  followTtsEnabled: boolean;
+  followDuration: number; // seconds
+  followStyle: 'neon-banner' | 'kawaii-badge' | 'minimal-pill' | 'card-glow';
+
+  // Share Alert (คนกดแชร์)
+  shareAlertEnabled: boolean;
+  shareSoundEnabled: boolean;
+  shareTtsEnabled: boolean;
+  shareDuration: number; // seconds
+  shareStyle: 'neon-banner' | 'kawaii-badge' | 'minimal-pill' | 'card-glow';
+
+  // Counters
+  streamFollowCount: number;
+  streamShareCount: number;
 }
 
 export type IndoFinityConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
@@ -167,5 +205,22 @@ export interface IndoFinityGiftEventData {
   uniqueId: string;
   nickname?: string;
   profilePictureUrl?: string;
+}
+
+export interface IndoFinityFollowEventData {
+  uniqueId: string;
+  nickname?: string;
+  profilePictureUrl?: string;
+  avatarThumb?: string;
+  avatar?: string;
+}
+
+export interface IndoFinityShareEventData {
+  uniqueId: string;
+  nickname?: string;
+  profilePictureUrl?: string;
+  avatarThumb?: string;
+  avatar?: string;
+  shareCount?: number;
 }
 

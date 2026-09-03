@@ -2,9 +2,12 @@ import React, { useEffect, useState, useRef } from 'react';
 import { ChatOverlayWidget } from './ChatOverlayWidget';
 import { LikeLeaderboardWidget } from './LikeLeaderboardWidget';
 import { GiftOverlayWidget } from './GiftOverlayWidget';
+import { FollowShareOverlayWidget } from './FollowShareOverlayWidget';
 import {
   ChatMessage,
   GiftAlert,
+  FollowAlert,
+  ShareAlert,
   LikeUser,
   OverlayCustomSettings,
   FloatingHeartItem,
@@ -21,11 +24,11 @@ import {
 } from '../data/mockData';
 import { sounds } from '../utils/soundEffects';
 import { ttsService } from '../utils/ttsService';
-import { Play, Sparkles, Heart, Gift, MessageSquare, EyeOff, Radio, Volume2, VolumeX } from 'lucide-react';
+import { Play, Sparkles, Heart, Gift, MessageSquare, EyeOff, Radio, Volume2, VolumeX, UserPlus, Share2 } from 'lucide-react';
 import { IndoFinityClient } from '../services/indofinityService';
 
 interface OverlayViewProps {
-  overlayType: 'leaderboard' | 'chat' | 'gift' | 'all';
+  overlayType: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'all';
 }
 
 export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
@@ -53,10 +56,22 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
 
   // TTS URL Params
   const ttsParam = urlParams.get('tts') === '1';
-  const ttsFormatParam = (urlParams.get('ttsformat') as any) || 'nameAndMessage';
+  const ttsFormatParam = (urlParams.get('ttsformat') as any) || 'sweet';
   const ttsSpeedParam = Number(urlParams.get('ttsspeed') || 1.05);
+  const ttsPitchParam = Number(urlParams.get('ttspitch') || 1.22);
   const ttsVolParam = Number(urlParams.get('ttsvol') || 90);
   const ttsVoiceParam = urlParams.get('ttsvoice') || 'default';
+  const ttsSweetParam = urlParams.get('ttssweet') !== '0';
+
+  // Follow & Share URL Params
+  const followParam = urlParams.get('follow') !== '0';
+  const shareParam = urlParams.get('share') !== '0';
+  const followTtsParam = urlParams.get('followtts') !== '0';
+  const shareTtsParam = urlParams.get('sharetts') !== '0';
+  const followDurParam = Number(urlParams.get('followdur') || 4);
+  const shareDurParam = Number(urlParams.get('sharedur') || 4);
+  const followStyleParam = (urlParams.get('followstyle') as any) || 'neon-banner';
+  const shareStyleParam = (urlParams.get('sharestyle') as any) || 'neon-banner';
 
   const [settings, setSettings] = useState<OverlayCustomSettings>({
     chatTheme: themeParam,
@@ -68,13 +83,16 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     chatSoundEnabled: true,
     chatMaxMessages: 15,
 
-    // TTS
+    // TTS (เสียงไทยหวานใส)
     chatTtsEnabled: ttsParam,
     chatTtsFormat: ttsFormatParam,
     chatTtsSpeed: ttsSpeedParam,
+    chatTtsPitch: ttsPitchParam,
     chatTtsVolume: ttsVolParam,
     chatTtsVoice: ttsVoiceParam,
+    chatTtsTonePreset: 'sweet',
     chatTtsSkipSpam: true,
+    chatTtsSweetEnding: ttsSweetParam,
 
     likeGoal: goalParam,
     currentLikes: 14280,
@@ -89,6 +107,23 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     giftShowParticles: true,
     giftMinCoinFilter: 1,
     giftStyle: 'banner-epic',
+
+    // Follow Alert
+    followAlertEnabled: followParam,
+    followSoundEnabled: true,
+    followTtsEnabled: followTtsParam,
+    followDuration: followDurParam,
+    followStyle: followStyleParam,
+
+    // Share Alert
+    shareAlertEnabled: shareParam,
+    shareSoundEnabled: true,
+    shareTtsEnabled: shareTtsParam,
+    shareDuration: shareDurParam,
+    shareStyle: shareStyleParam,
+
+    streamFollowCount: 0,
+    streamShareCount: 0,
   });
 
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
@@ -96,10 +131,14 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   const [totalLikes, setTotalLikes] = useState<number>(14280);
   const [recentHearts, setRecentHearts] = useState<FloatingHeartItem[]>([]);
   const [currentGiftAlert, setCurrentGiftAlert] = useState<GiftAlert | null>(null);
+  const [currentFollowAlert, setCurrentFollowAlert] = useState<FollowAlert | null>(null);
+  const [currentShareAlert, setCurrentShareAlert] = useState<ShareAlert | null>(null);
   const [showHelperBar, setShowHelperBar] = useState(!hideControlsParam);
   const [indoFinityStatus, setIndoFinityStatus] = useState<IndoFinityConnectionStatus>('connecting');
 
   const giftTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const followTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const shareTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const indoFinityClientRef = useRef<IndoFinityClient | null>(null);
 
   // Sound & TTS settings
@@ -110,17 +149,21 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
       enabled: settings.chatTtsEnabled,
       format: settings.chatTtsFormat,
       rate: settings.chatTtsSpeed,
+      pitch: settings.chatTtsPitch,
       volume: settings.chatTtsVolume,
       voiceURI: settings.chatTtsVoice,
       cleanSpam: settings.chatTtsSkipSpam,
+      sweetEnding: settings.chatTtsSweetEnding,
     });
   }, [
     settings.chatTtsEnabled,
     settings.chatTtsFormat,
     settings.chatTtsSpeed,
+    settings.chatTtsPitch,
     settings.chatTtsVolume,
     settings.chatTtsVoice,
     settings.chatTtsSkipSpam,
+    settings.chatTtsSweetEnding,
   ]);
 
   // Action: Add likes
@@ -166,6 +209,42 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     });
   };
 
+  // Action: Handle new Follower
+  const handleFollowAlert = (alert: FollowAlert) => {
+    if (settings.followSoundEnabled) {
+      sounds.playFollow();
+    }
+    setCurrentFollowAlert(alert);
+    setSettings((prev) => ({ ...prev, streamFollowCount: prev.streamFollowCount + 1 }));
+
+    if (settings.followTtsEnabled && settings.chatTtsEnabled) {
+      ttsService.speakFollow(alert.username);
+    }
+
+    if (followTimeoutRef.current) clearTimeout(followTimeoutRef.current);
+    followTimeoutRef.current = setTimeout(() => {
+      setCurrentFollowAlert(null);
+    }, settings.followDuration * 1000);
+  };
+
+  // Action: Handle Stream Share
+  const handleShareAlert = (alert: ShareAlert) => {
+    if (settings.shareSoundEnabled) {
+      sounds.playShare();
+    }
+    setCurrentShareAlert(alert);
+    setSettings((prev) => ({ ...prev, streamShareCount: prev.streamShareCount + (alert.shareCount || 1) }));
+
+    if (settings.shareTtsEnabled && settings.chatTtsEnabled) {
+      ttsService.speakShare(alert.username);
+    }
+
+    if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+    shareTimeoutRef.current = setTimeout(() => {
+      setCurrentShareAlert(null);
+    }, settings.shareDuration * 1000);
+  };
+
   // Connect to IndoFinity WebSocket
   useEffect(() => {
     const client = new IndoFinityClient(wsUrlParam, true);
@@ -195,6 +274,12 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
           setCurrentGiftAlert(null);
         }, settings.giftDuration * 1000);
       },
+      onFollow: (alert) => {
+        handleFollowAlert(alert);
+      },
+      onShare: (alert) => {
+        handleShareAlert(alert);
+      },
     });
 
     client.connect();
@@ -202,7 +287,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     return () => {
       client.disconnect();
     };
-  }, [wsUrlParam, settings.giftDuration]);
+  }, [wsUrlParam, settings.giftDuration, settings.followDuration, settings.shareDuration]);
 
   // Action: Send test chat
   const handleSendChat = () => {
@@ -232,6 +317,31 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     if (settings.chatTtsEnabled) {
       ttsService.speakChat(newMsg.username, newMsg.message);
     }
+  };
+
+  // Action: Send test follow
+  const handleSendTestFollow = () => {
+    const randomUser = SIMULATION_NAMES[Math.floor(Math.random() * SIMULATION_NAMES.length)];
+    handleFollowAlert({
+      id: 'follow-' + Date.now(),
+      username: randomUser.name,
+      avatarUrl: randomUser.avatar,
+      timestamp: Date.now(),
+      uniqueId: randomUser.name.toLowerCase().replace(/\s+/g, '_'),
+    });
+  };
+
+  // Action: Send test share
+  const handleSendTestShare = () => {
+    const randomUser = SIMULATION_NAMES[Math.floor(Math.random() * SIMULATION_NAMES.length)];
+    handleShareAlert({
+      id: 'share-' + Date.now(),
+      username: randomUser.name,
+      avatarUrl: randomUser.avatar,
+      timestamp: Date.now(),
+      shareCount: 1,
+      uniqueId: randomUser.name.toLowerCase().replace(/\s+/g, '_'),
+    });
   };
 
   // Action: Send gift alert
@@ -315,6 +425,20 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
             <Gift className="w-3 h-3" /> เพชร
           </button>
           <button
+            onClick={handleSendTestFollow}
+            className="px-2 py-1 bg-pink-600/30 hover:bg-pink-600/50 text-pink-300 text-xs font-semibold rounded-lg border border-pink-500/40 flex items-center gap-1 cursor-pointer"
+            title="ทดสอบการแจ้งเตือนคนกดติดตาม (Follow)"
+          >
+            <UserPlus className="w-3 h-3" /> +ติดตาม
+          </button>
+          <button
+            onClick={handleSendTestShare}
+            className="px-2 py-1 bg-teal-600/30 hover:bg-teal-600/50 text-teal-300 text-xs font-semibold rounded-lg border border-teal-500/40 flex items-center gap-1 cursor-pointer"
+            title="ทดสอบการแจ้งเตือนคนกดแชร์ (Share)"
+          >
+            <Share2 className="w-3 h-3" /> +แชร์
+          </button>
+          <button
             onClick={() => {
               setSettings((prev) => {
                 const next = !prev.chatTtsEnabled;
@@ -324,13 +448,13 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
             }}
             className={`px-2 py-1 text-xs font-semibold rounded-lg border flex items-center gap-1 cursor-pointer transition-all ${
               settings.chatTtsEnabled
-                ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/40'
+                ? 'bg-pink-600/30 text-pink-300 border-pink-500/40'
                 : 'bg-slate-800 text-slate-400 border-white/10'
             }`}
-            title="เปิด/ปิดเสียงอ่านแชทอัตโนมัติ (TTS)"
+            title="เปิด/ปิดเสียงอ่านแชทไทยเสียงหวานใส (TTS)"
           >
-            {settings.chatTtsEnabled ? <Volume2 className="w-3 h-3 text-emerald-400" /> : <VolumeX className="w-3 h-3 text-slate-400" />}
-            <span>{settings.chatTtsEnabled ? 'TTS ON' : 'TTS OFF'}</span>
+            {settings.chatTtsEnabled ? <Volume2 className="w-3 h-3 text-pink-400" /> : <VolumeX className="w-3 h-3 text-slate-400" />}
+            <span>{settings.chatTtsEnabled ? '🌸 หวานใส ON' : 'TTS OFF'}</span>
           </button>
           <button
             onClick={() => setShowHelperBar(false)}
@@ -371,9 +495,48 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
         </div>
       )}
 
+      {overlayType === 'follow' && (
+        <div className="w-full h-full flex items-center justify-center">
+          <FollowShareOverlayWidget
+            currentFollow={currentFollowAlert}
+            settings={settings}
+            isOBSMode={true}
+            mode="follow-only"
+          />
+        </div>
+      )}
+
+      {overlayType === 'share' && (
+        <div className="w-full h-full flex items-center justify-center">
+          <FollowShareOverlayWidget
+            currentShare={currentShareAlert}
+            settings={settings}
+            isOBSMode={true}
+            mode="share-only"
+          />
+        </div>
+      )}
+
+      {overlayType === 'alerts' && (
+        <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+          <GiftOverlayWidget
+            currentAlert={currentGiftAlert}
+            settings={settings}
+            isOBSMode={true}
+          />
+          <FollowShareOverlayWidget
+            currentFollow={currentFollowAlert}
+            currentShare={currentShareAlert}
+            settings={settings}
+            isOBSMode={true}
+            mode="both"
+          />
+        </div>
+      )}
+
       {overlayType === 'all' && (
         <div className="w-full h-full relative p-4 flex flex-col justify-between">
-          {/* Top Row: Like Leaderboard on left & Gift Alert centered */}
+          {/* Top Row: Like Leaderboard on left & Gift / Follow / Share Alerts centered */}
           <div className="flex items-start justify-between w-full">
             <div className="w-80">
               <LikeLeaderboardWidget
@@ -385,11 +548,18 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
               />
             </div>
 
-            <div className="flex-1 flex justify-center pt-6">
+            <div className="flex-1 flex flex-col items-center justify-start pt-4 gap-2">
               <GiftOverlayWidget
                 currentAlert={currentGiftAlert}
                 settings={settings}
                 isOBSMode={true}
+              />
+              <FollowShareOverlayWidget
+                currentFollow={currentFollowAlert}
+                currentShare={currentShareAlert}
+                settings={settings}
+                isOBSMode={true}
+                mode="both"
               />
             </div>
           </div>
