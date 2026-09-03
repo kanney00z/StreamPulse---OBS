@@ -12,19 +12,14 @@ import {
   OverlayCustomSettings,
   FloatingHeartItem,
   ChatThemeId,
-  GiftItem,
   IndoFinityConnectionStatus,
 } from '../types';
 import {
   INITIAL_CHAT_MESSAGES,
   INITIAL_LIKE_LEADERBOARD,
-  GIFT_ITEMS,
-  SIMULATION_NAMES,
-  RANDOM_CHAT_PHRASES,
 } from '../data/mockData';
 import { sounds } from '../utils/soundEffects';
 import { ttsService } from '../utils/ttsService';
-import { Play, Sparkles, Heart, Gift, MessageSquare, EyeOff, Radio, Volume2, VolumeX, UserPlus, Share2 } from 'lucide-react';
 import { IndoFinityClient } from '../services/indofinityService';
 
 interface OverlayViewProps {
@@ -51,7 +46,6 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   const goalParam = Number(urlParams.get('goal') || 25000);
   const showGoalParam = urlParams.get('showgoal') !== '0';
   const durationParam = Number(urlParams.get('duration') || 5);
-  const hideControlsParam = urlParams.get('notest') === '1';
   const wsUrlParam = urlParams.get('ws') || 'ws://localhost:62024';
 
   // TTS URL Params
@@ -133,8 +127,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   const [currentGiftAlert, setCurrentGiftAlert] = useState<GiftAlert | null>(null);
   const [currentFollowAlert, setCurrentFollowAlert] = useState<FollowAlert | null>(null);
   const [currentShareAlert, setCurrentShareAlert] = useState<ShareAlert | null>(null);
-  const [showHelperBar, setShowHelperBar] = useState(!hideControlsParam);
-  const [indoFinityStatus, setIndoFinityStatus] = useState<IndoFinityConnectionStatus>('connecting');
+  const [, setIndoFinityStatus] = useState<IndoFinityConnectionStatus>('connecting');
 
   const giftTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const followTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -289,183 +282,8 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     };
   }, [wsUrlParam, settings.giftDuration, settings.followDuration, settings.shareDuration]);
 
-  // Action: Send test chat
-  const handleSendChat = () => {
-    sounds.playChat();
-    const randomUser = SIMULATION_NAMES[Math.floor(Math.random() * SIMULATION_NAMES.length)];
-    const randomText = RANDOM_CHAT_PHRASES[Math.floor(Math.random() * RANDOM_CHAT_PHRASES.length)];
-    const possibleBadges: ('mod' | 'vip' | 'sub' | 'top_fan' | 'verified')[][] = [
-      ['vip'],
-      ['sub'],
-      ['mod', 'sub'],
-      ['top_fan'],
-      [],
-    ];
-    const badges = possibleBadges[Math.floor(Math.random() * possibleBadges.length)];
-
-    const newMsg: ChatMessage = {
-      id: 'chat-' + Date.now() + Math.random(),
-      username: randomUser.name,
-      avatarUrl: randomUser.avatar,
-      message: randomText,
-      timestamp: Date.now(),
-      badges,
-      color: ['#38bdf8', '#f472b6', '#34d399', '#fbbf24', '#c084fc'][Math.floor(Math.random() * 5)],
-    };
-
-    setMessages((prev) => [...prev, newMsg]);
-    if (settings.chatTtsEnabled) {
-      ttsService.speakChat(newMsg.username, newMsg.message);
-    }
-  };
-
-  // Action: Send test follow
-  const handleSendTestFollow = () => {
-    const randomUser = SIMULATION_NAMES[Math.floor(Math.random() * SIMULATION_NAMES.length)];
-    handleFollowAlert({
-      id: 'follow-' + Date.now(),
-      username: randomUser.name,
-      avatarUrl: randomUser.avatar,
-      timestamp: Date.now(),
-      uniqueId: randomUser.name.toLowerCase().replace(/\s+/g, '_'),
-    });
-  };
-
-  // Action: Send test share
-  const handleSendTestShare = () => {
-    const randomUser = SIMULATION_NAMES[Math.floor(Math.random() * SIMULATION_NAMES.length)];
-    handleShareAlert({
-      id: 'share-' + Date.now(),
-      username: randomUser.name,
-      avatarUrl: randomUser.avatar,
-      timestamp: Date.now(),
-      shareCount: 1,
-      uniqueId: randomUser.name.toLowerCase().replace(/\s+/g, '_'),
-    });
-  };
-
-  // Action: Send gift alert
-  const handleSendGift = (gift: GiftItem, combo: number = 1) => {
-    if (combo > 1) {
-      sounds.playCombo(combo);
-    } else {
-      sounds.playGift(gift.rarity);
-    }
-
-    const randomUser = SIMULATION_NAMES[Math.floor(Math.random() * SIMULATION_NAMES.length)];
-    const alert: GiftAlert = {
-      id: 'gift-' + Date.now(),
-      senderName: randomUser.name,
-      senderAvatar: randomUser.avatar,
-      gift,
-      amount: 1,
-      comboCount: combo,
-      customMessage: combo > 3 ? `ส่งรัวๆ x${combo} เลิฟสตรีมเมอร์ม้ากมากกก! 🎉` : undefined,
-      timestamp: Date.now(),
-    };
-
-    setCurrentGiftAlert(alert);
-
-    if (giftTimeoutRef.current) clearTimeout(giftTimeoutRef.current);
-    giftTimeoutRef.current = setTimeout(() => {
-      setCurrentGiftAlert(null);
-    }, settings.giftDuration * 1000);
-  };
-
   return (
-    <div className="w-screen h-screen overflow-hidden relative bg-transparent">
-      {/* Floating Mini Test Bar for direct browser preview (Can be minimized) */}
-      {showHelperBar && (
-        <div className="fixed top-3 right-3 z-50 flex items-center gap-2 bg-slate-950/90 backdrop-blur-xl border border-white/15 p-2 rounded-2xl shadow-2xl">
-          {/* IndoFinity Status Pill */}
-          <div
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-bold border transition-all ${
-              indoFinityStatus === 'connected'
-                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                : indoFinityStatus === 'connecting'
-                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-            }`}
-            title={`IndoFinity WebSocket: ${wsUrlParam} (${indoFinityStatus})`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                indoFinityStatus === 'connected'
-                  ? 'bg-emerald-400 animate-pulse'
-                  : indoFinityStatus === 'connecting'
-                  ? 'bg-amber-400 animate-spin'
-                  : 'bg-rose-400'
-              }`}
-            />
-            <span>
-              {indoFinityStatus === 'connected'
-                ? 'IndoFinity Live'
-                : indoFinityStatus === 'connecting'
-                ? 'IndoFinity 62024...'
-                : 'IndoFinity Offline'}
-            </span>
-          </div>
-
-          <button
-            onClick={() => handleAddLikes(50)}
-            className="px-2 py-1 bg-rose-600/30 hover:bg-rose-600/50 text-rose-300 text-xs font-semibold rounded-lg border border-rose-500/40 flex items-center gap-1 cursor-pointer"
-          >
-            <Heart className="w-3 h-3 fill-current" /> +50 ไลก์
-          </button>
-          <button
-            onClick={handleSendChat}
-            className="px-2 py-1 bg-sky-600/30 hover:bg-sky-600/50 text-sky-300 text-xs font-semibold rounded-lg border border-sky-500/40 flex items-center gap-1 cursor-pointer"
-          >
-            <MessageSquare className="w-3 h-3" /> แชท
-          </button>
-          <button
-            onClick={() => handleSendGift(GIFT_ITEMS[2])}
-            className="px-2 py-1 bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 text-xs font-semibold rounded-lg border border-purple-500/40 flex items-center gap-1 cursor-pointer"
-          >
-            <Gift className="w-3 h-3" /> เพชร
-          </button>
-          <button
-            onClick={handleSendTestFollow}
-            className="px-2 py-1 bg-pink-600/30 hover:bg-pink-600/50 text-pink-300 text-xs font-semibold rounded-lg border border-pink-500/40 flex items-center gap-1 cursor-pointer"
-            title="ทดสอบการแจ้งเตือนคนกดติดตาม (Follow)"
-          >
-            <UserPlus className="w-3 h-3" /> +ติดตาม
-          </button>
-          <button
-            onClick={handleSendTestShare}
-            className="px-2 py-1 bg-teal-600/30 hover:bg-teal-600/50 text-teal-300 text-xs font-semibold rounded-lg border border-teal-500/40 flex items-center gap-1 cursor-pointer"
-            title="ทดสอบการแจ้งเตือนคนกดแชร์ (Share)"
-          >
-            <Share2 className="w-3 h-3" /> +แชร์
-          </button>
-          <button
-            onClick={() => {
-              setSettings((prev) => {
-                const next = !prev.chatTtsEnabled;
-                ttsService.updateOptions({ enabled: next });
-                return { ...prev, chatTtsEnabled: next };
-              });
-            }}
-            className={`px-2 py-1 text-xs font-semibold rounded-lg border flex items-center gap-1 cursor-pointer transition-all ${
-              settings.chatTtsEnabled
-                ? 'bg-pink-600/30 text-pink-300 border-pink-500/40'
-                : 'bg-slate-800 text-slate-400 border-white/10'
-            }`}
-            title="เปิด/ปิดเสียงอ่านแชทไทยเสียงหวานใส (TTS)"
-          >
-            {settings.chatTtsEnabled ? <Volume2 className="w-3 h-3 text-pink-400" /> : <VolumeX className="w-3 h-3 text-slate-400" />}
-            <span>{settings.chatTtsEnabled ? '🌸 หวานใส ON' : 'TTS OFF'}</span>
-          </button>
-          <button
-            onClick={() => setShowHelperBar(false)}
-            className="p-1 text-slate-400 hover:text-white rounded-lg cursor-pointer"
-            title="ซ่อนแถบทดสอบนี้"
-          >
-            <EyeOff className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
+    <div className="w-screen h-screen overflow-hidden relative bg-transparent select-none">
       {/* Render Selected Overlay */}
       {overlayType === 'chat' && (
         <div className="w-full h-full">
