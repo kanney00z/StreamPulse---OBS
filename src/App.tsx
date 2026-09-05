@@ -136,6 +136,7 @@ export default function App() {
 
     // Subathon Timer Settings
     subathonTheme: 'cyberpunk-neon',
+    subathonStyle: 'frameless', // เริ่มต้นด้วยสไตล์คลีนไม่มีกรอบ (แค่เวลา + หลอดล่าง) ตามที่ต้องการ และสลับได้
     subathonTitle: 'สตรีมมาราธอน 24 ชม.',
     subathonAutoAdd: true,
     subathonAddPerFollow: 30,
@@ -540,7 +541,7 @@ export default function App() {
   const copyWidgetUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon') => {
     const origin = window.location.origin;
     const url = type === 'subathon'
-      ? `${origin}?mode=overlay&overlay=subathon&subathontheme=${settings.subathonTheme}`
+      ? `${origin}?mode=overlay&overlay=subathon&subathontheme=${settings.subathonTheme}&subathonstyle=${settings.subathonStyle}${settings.subathonStartSeconds ? `&subathonsec=${settings.subathonStartSeconds}` : ''}`
       : `${origin}?mode=overlay&overlay=${type}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopiedKey(type);
@@ -844,6 +845,7 @@ export default function App() {
                           maxCapSeconds={settings.subathonMaxCapHours > 0 ? settings.subathonMaxCapHours * 3600 : 0}
                           isRunning={subathonIsRunning}
                           theme={settings.subathonTheme}
+                          style={settings.subathonStyle}
                           title={settings.subathonTitle}
                           addedEvents={subathonEvents}
                           showProgressBar={settings.subathonShowProgressBar}
@@ -890,6 +892,7 @@ export default function App() {
                               maxCapSeconds={settings.subathonMaxCapHours > 0 ? settings.subathonMaxCapHours * 3600 : 0}
                               isRunning={subathonIsRunning}
                               theme={settings.subathonTheme}
+                              style={settings.subathonStyle}
                               title={settings.subathonTitle}
                               addedEvents={subathonEvents}
                               showProgressBar={settings.subathonShowProgressBar}

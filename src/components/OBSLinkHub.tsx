@@ -95,8 +95,12 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
 
     if (type === 'subathon') {
       params.set('subathontheme', settings.subathonTheme);
+      params.set('subathonstyle', settings.subathonStyle);
       params.set('subathontitle', settings.subathonTitle);
       params.set('subathoncap', settings.subathonMaxCapHours.toString());
+      if (settings.subathonStartSeconds) {
+        params.set('subathonsec', settings.subathonStartSeconds.toString());
+      }
     }
 
     return `${origin}?${params.toString()}`;
@@ -778,8 +782,24 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
               นาฬิกานับถอยหลังไลฟ์มาราธอน เพิ่มเวลาอัตโนมัติเมื่อมีคนส่งของขวัญ / เคาะจอ / กดติดตาม / กดแชร์ พร้อมเสียงและ Floating Alert
             </p>
 
-            {/* Theme Selector Pills */}
+            {/* Theme & Style Selector Pills */}
             <div className="flex items-center gap-3 text-xs pt-1 flex-wrap text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <span>สไตล์:</span>
+                <select
+                  value={settings.subathonStyle}
+                  onChange={(e) =>
+                    onUpdateSettings({
+                      subathonStyle: e.target.value as 'card' | 'frameless',
+                    })
+                  }
+                  className="bg-slate-950 border border-cyan-500/40 rounded-lg px-2.5 py-1 text-xs text-cyan-300 font-bold focus:outline-none focus:border-cyan-400"
+                >
+                  <option value="frameless">✨ ไม่มีกรอบ (แค่เวลา + หลอดล่าง)</option>
+                  <option value="card">🔲 มีกรอบการ์ด (Card Box)</option>
+                </select>
+              </div>
+
               <div className="flex items-center gap-1.5">
                 <span>เลือกธีม:</span>
                 <select

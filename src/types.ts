@@ -189,6 +189,8 @@ export interface OverlayCustomSettings {
 
   // Subathon Timer (โหมดจับเวลามาราธอน หลากหลายธีม)
   subathonTheme: SubathonThemeId;
+  subathonStyle: 'card' | 'frameless'; // 'frameless' = ไม่มีกรอบ (แค่เวลา + หลอดล่าง), 'card' = มีกรอบการ์ด
+  subathonStartSeconds?: number; // เวลาเริ่มต้นที่กำหนดเอง (วินาที)
   subathonTitle: string;
   subathonAutoAdd: boolean;
   subathonAddPerFollow: number; // e.g. 30 seconds

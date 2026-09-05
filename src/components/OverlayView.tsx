@@ -72,6 +72,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
 
   // Subathon URL Params
   const subathonThemeParam = (urlParams.get('subathontheme') || urlParams.get('theme') || 'cyberpunk-neon') as SubathonThemeId;
+  const subathonStyleParam = (urlParams.get('subathonstyle') as 'card' | 'frameless') || 'frameless';
   const subathonTitleParam = urlParams.get('subathontitle') || 'SUBATHON MARATHON';
   const subathonSecParam = Number(urlParams.get('subathonsec') || 7200);
   const subathonCapParam = Number(urlParams.get('subathoncap') || 12);
@@ -130,6 +131,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
 
     // Subathon Timer
     subathonTheme: subathonThemeParam,
+    subathonStyle: subathonStyleParam,
     subathonTitle: subathonTitleParam,
     subathonAutoAdd: true,
     subathonAddPerFollow: 30,
@@ -276,21 +278,26 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   };
 
   // Action: Add Subathon Time
-  const handleAddSubathonTime = (secsToAdd: number, reason: string, senderName?: string) => {
-    if (secsToAdd <= 0) return;
+  const handleAddSubathonTime = (secsToAdd: number, reason?: string, senderName?: string) => {
+    if (secsToAdd === 0) return;
     setSubathonSeconds((prev) => {
       const maxCap = settings.subathonMaxCapHours > 0 ? settings.subathonMaxCapHours * 3600 : Infinity;
-      return Math.min(maxCap, prev + secsToAdd);
+      const target = prev + secsToAdd;
+      return Math.max(0, Math.min(maxCap, target));
     });
 
     if (settings.subathonSoundEnabled) {
-      sounds.playTimerAdd();
+      if (secsToAdd > 0) {
+        sounds.playTimerAdd();
+      } else {
+        sounds.playLike();
+      }
     }
 
     const newEvent: SubathonTimeAddedEvent = {
       id: Math.random().toString(36).substring(2, 9),
       seconds: secsToAdd,
-      reason,
+      reason: reason || (secsToAdd > 0 ? 'เพิ่มเวลา' : 'ลดเวลา'),
       senderName,
       timestamp: Date.now(),
     };
@@ -463,6 +470,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
             maxCapSeconds={settings.subathonMaxCapHours * 3600}
             isRunning={subathonIsRunning}
             theme={settings.subathonTheme}
+            style={settings.subathonStyle}
             title={settings.subathonTitle}
             addedEvents={subathonEvents}
             showProgressBar={settings.subathonShowProgressBar}
