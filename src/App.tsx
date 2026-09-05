@@ -25,6 +25,8 @@ import {
   ExternalLink,
   UserPlus,
   Share2,
+  RotateCcw,
+  Timer,
 } from 'lucide-react';
 import {
   ChatMessage,
@@ -35,6 +37,7 @@ import {
   OverlayCustomSettings,
   FloatingHeartItem,
   GiftItem,
+  SubathonTimeAddedEvent,
   IndoFinityConnectionStatus,
   IndoFinityLogItem,
 } from './types';
@@ -50,6 +53,8 @@ import { ChatOverlayWidget } from './components/ChatOverlayWidget';
 import { LikeLeaderboardWidget } from './components/LikeLeaderboardWidget';
 import { GiftOverlayWidget } from './components/GiftOverlayWidget';
 import { FollowShareOverlayWidget } from './components/FollowShareOverlayWidget';
+import { SubathonTimerWidget } from './components/SubathonTimerWidget';
+import { SubathonControlCard } from './components/SubathonControlCard';
 import { StreamSimulatorDeck } from './components/StreamSimulatorDeck';
 import { OBSLinkHub } from './components/OBSLinkHub';
 import { ThemeSelector } from './components/ThemeSelector';
@@ -63,12 +68,12 @@ import { ttsService } from './utils/ttsService';
 export default function App() {
   // Check if opened as standalone OBS Browser Source overlay
   const [isOverlayMode, setIsOverlayMode] = useState(false);
-  const [overlayType, setOverlayType] = useState<'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'all'>('all');
+  const [overlayType, setOverlayType] = useState<'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'all'>('all');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const mode = params.get('mode');
-    const overlay = params.get('overlay') as 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'all';
+    const overlay = params.get('overlay') as 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'all';
 
     if (mode === 'overlay' || overlay) {
       setIsOverlayMode(true);
@@ -87,19 +92,19 @@ export default function App() {
     chatSoundEnabled: true,
     chatMaxMessages: 12,
 
-    // TTS (Text-to-Speech อ่านแชทสดอัตโนมัติ เสียงหวานใส)
+    // TTS (Text-to-Speech อ่านแชทสดอัตโนมัติ ปรับแต่งเสียงได้หลากหลาย)
     chatTtsEnabled: true,
-    chatTtsFormat: 'sweet',
-    chatTtsSpeed: 1.05,
-    chatTtsPitch: 1.22,
+    chatTtsFormat: 'nameAndMessage',
+    chatTtsSpeed: 0.86, // จังหวะปกติ ไม่เร็วเกิน ชัดเจน ฟังสบาย เป็นธรรมชาติ
+    chatTtsPitch: 1.05, // โทนเสียงพูดผู้หญิงธรรมชาติ ฟังสบาย
     chatTtsVolume: 90,
-    chatTtsVoice: 'default',
-    chatTtsTonePreset: 'sweet',
+    chatTtsVoice: 'female_auto',
+    chatTtsTonePreset: 'female-natural',
     chatTtsSkipSpam: true,
-    chatTtsSweetEnding: true,
+    chatTtsSweetEnding: false,
 
     likeGoal: 20000,
-    currentLikes: 14280,
+    currentLikes: 0,
     likeStyle: 'podium-card',
     likeShowGoalBar: true,
     likeShowTopCount: 5,
@@ -128,20 +133,37 @@ export default function App() {
 
     streamFollowCount: 0,
     streamShareCount: 0,
+
+    // Subathon Timer Settings
+    subathonTheme: 'cyberpunk-neon',
+    subathonTitle: 'สตรีมมาราธอน 24 ชม.',
+    subathonAutoAdd: true,
+    subathonAddPerFollow: 30,
+    subathonAddPerShare: 15,
+    subathonAddPer100Likes: 10,
+    subathonAddPerCoin: 1,
+    subathonMaxCapHours: 12,
+    subathonShowProgressBar: true,
+    subathonSoundEnabled: true,
   });
 
-  // Live widgets state
+  // Live widgets state (Starts clean with 0 likes and empty leaderboard for new stream)
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
-  const [leaderboard, setLeaderboard] = useState<LikeUser[]>(INITIAL_LIKE_LEADERBOARD);
-  const [totalLikes, setTotalLikes] = useState<number>(14280);
+  const [leaderboard, setLeaderboard] = useState<LikeUser[]>([]);
+  const [totalLikes, setTotalLikes] = useState<number>(0);
   const [recentHearts, setRecentHearts] = useState<FloatingHeartItem[]>([]);
   const [currentGiftAlert, setCurrentGiftAlert] = useState<GiftAlert | null>(null);
   const [currentFollowAlert, setCurrentFollowAlert] = useState<FollowAlert | null>(null);
   const [currentShareAlert, setCurrentShareAlert] = useState<ShareAlert | null>(null);
 
+  // Subathon Live State
+  const [subathonSeconds, setSubathonSeconds] = useState<number>(7200); // 2 hours
+  const [subathonIsRunning, setSubathonIsRunning] = useState<boolean>(true);
+  const [subathonEvents, setSubathonEvents] = useState<SubathonTimeAddedEvent[]>([]);
+
   // Studio UI state
   const [activeTab, setActiveTab] = useState<'studio' | 'themes' | 'links' | 'indofinity'>('studio');
-  const [activeWidgetView, setActiveWidgetView] = useState<'all' | 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'alerts'>('all');
+  const [activeWidgetView, setActiveWidgetView] = useState<'all' | 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon'>('all');
   const [canvasAspect, setCanvasAspect] = useState<'16:9' | '9:16'>('16:9');
   const [canvasBg, setCanvasBg] = useState<'gaming' | 'lofi' | 'dark' | 'transparent'>('gaming');
   const [isAutoSimulating, setIsAutoSimulating] = useState(false);
@@ -175,10 +197,71 @@ export default function App() {
     });
   }, [settings, soundEnabled]);
 
+  // Subathon Countdown Timer Interval
+  useEffect(() => {
+    if (!subathonIsRunning) return;
+    const interval = setInterval(() => {
+      setSubathonSeconds((prev) => {
+        if (prev <= 1) {
+          if (prev === 1 && settings.subathonSoundEnabled && soundEnabled) {
+            sounds.playTimerEnd();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [subathonIsRunning, settings.subathonSoundEnabled, soundEnabled]);
+
+  // Action: Add or Subtract Subathon Time
+  const handleAddSubathonTime = (secsToAdd: number, reason?: string, senderName?: string) => {
+    if (secsToAdd === 0) return;
+    setSubathonSeconds((prev) => {
+      const maxCap = settings.subathonMaxCapHours > 0 ? settings.subathonMaxCapHours * 3600 : Infinity;
+      const target = prev + secsToAdd;
+      return Math.max(0, Math.min(maxCap, target));
+    });
+
+    if (settings.subathonSoundEnabled && soundEnabled) {
+      if (secsToAdd > 0) {
+        sounds.playTimerAdd();
+      } else {
+        sounds.playLike();
+      }
+    }
+
+    const newEvent: SubathonTimeAddedEvent = {
+      id: Math.random().toString(36).substring(2, 9),
+      seconds: secsToAdd,
+      reason: reason || (secsToAdd > 0 ? 'เพิ่มเวลา' : 'ลดเวลา'),
+      senderName,
+      timestamp: Date.now(),
+    };
+    setSubathonEvents((prev) => [...prev, newEvent]);
+    setTimeout(() => {
+      setSubathonEvents((prev) => prev.filter((e) => e.id !== newEvent.id));
+    }, 2800);
+  };
+
+  const handleToggleSubathon = () => {
+    setSubathonIsRunning((prev) => !prev);
+  };
+
+  const handleResetSubathonTimer = (newSecs: number = 7200) => {
+    setSubathonSeconds(newSecs);
+  };
+
   // Action: Add Likes (supports real TikTok user from IndoFinity)
   const handleAddLikes = (count: number, user?: LikeUser, total?: number) => {
     sounds.playLike();
     setTotalLikes((prev) => (total !== undefined ? total : prev + count));
+
+    // Subathon auto-add from likes
+    if (settings.subathonAutoAdd && settings.subathonAddPer100Likes > 0 && count >= 10) {
+      const addSecs = Math.max(1, Math.round((count / 100) * settings.subathonAddPer100Likes));
+      handleAddSubathonTime(addSecs, `เคาะจอ ${count} ไลก์`);
+    }
 
     const heartColors = ['#f43f5e', '#ec4899', '#f59e0b', '#a855f7', '#38bdf8', '#fb7185'];
     const newHearts: FloatingHeartItem[] = Array.from({ length: Math.min(count, 6) }).map(() => ({
@@ -211,10 +294,29 @@ export default function App() {
         updated.sort((a, b) => b.likeCount - a.likeCount);
         return updated.map((u, i) => ({ ...u, rank: i + 1 }));
       } else {
-        updated[0] = { ...updated[0], likeCount: updated[0].likeCount + count };
+        if (updated.length > 0) {
+          updated[0] = { ...updated[0], likeCount: updated[0].likeCount + count };
+        } else {
+          const simUser = SIMULATION_NAMES[0];
+          updated.push({
+            id: 'sim-liker-1',
+            name: simUser.name,
+            avatar: simUser.avatar,
+            likeCount: count,
+            rank: 1,
+            badge: '👑 MVP Liker',
+          });
+        }
         return updated;
       }
     });
+  };
+
+  // Action: Reset Likes to 0 (For fresh stream sessions)
+  const handleResetLikes = () => {
+    setTotalLikes(0);
+    setLeaderboard([]);
+    setSettings((prev) => ({ ...prev, currentLikes: 0 }));
   };
 
   // Action: Send Chat
@@ -284,6 +386,13 @@ export default function App() {
     giftTimeoutRef.current = setTimeout(() => {
       setCurrentGiftAlert(null);
     }, settings.giftDuration * 1000);
+
+    // Subathon auto-add from gift
+    if (settings.subathonAutoAdd && settings.subathonAddPerCoin > 0) {
+      const totalCoins = (gift.coinValue || 1) * combo;
+      const addSecs = Math.max(1, Math.round(totalCoins * settings.subathonAddPerCoin));
+      handleAddSubathonTime(addSecs, gift.nameTh || gift.name, name);
+    }
   };
 
   // Action: Handle Follow Alert
@@ -302,6 +411,11 @@ export default function App() {
     followTimeoutRef.current = setTimeout(() => {
       setCurrentFollowAlert(null);
     }, settings.followDuration * 1000);
+
+    // Subathon auto-add from follow
+    if (settings.subathonAutoAdd && settings.subathonAddPerFollow > 0) {
+      handleAddSubathonTime(settings.subathonAddPerFollow, 'คนติดตามใหม่', alert.username);
+    }
   };
 
   // Action: Handle Share Alert
@@ -323,6 +437,11 @@ export default function App() {
     shareTimeoutRef.current = setTimeout(() => {
       setCurrentShareAlert(null);
     }, settings.shareDuration * 1000);
+
+    // Subathon auto-add from share
+    if (settings.subathonAutoAdd && settings.subathonAddPerShare > 0) {
+      handleAddSubathonTime(settings.subathonAddPerShare, 'คนแชร์ไลฟ์', alert.username);
+    }
   };
 
   // Action: Send Test Follow
@@ -418,9 +537,11 @@ export default function App() {
     setSettings((prev) => ({ ...prev, ...partial }));
   };
 
-  const copyWidgetUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts') => {
+  const copyWidgetUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon') => {
     const origin = window.location.origin;
-    const url = `${origin}?mode=overlay&overlay=${type}`;
+    const url = type === 'subathon'
+      ? `${origin}?mode=overlay&overlay=subathon&subathontheme=${settings.subathonTheme}`
+      : `${origin}?mode=overlay&overlay=${type}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopiedKey(type);
       setTimeout(() => setCopiedKey(null), 2500);
@@ -638,6 +759,17 @@ export default function App() {
                   <Share2 className="w-3.5 h-3.5" />
                   5. Share Alert
                 </button>
+                <button
+                  onClick={() => setActiveWidgetView('subathon')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeWidgetView === 'subathon'
+                      ? 'bg-cyan-400/20 text-cyan-300 border border-cyan-400/40 shadow-[0_0_15px_rgba(6,182,212,0.2)]'
+                      : 'bg-slate-950 text-slate-400 hover:text-white border border-white/10'
+                  }`}
+                >
+                  <Timer className="w-3.5 h-3.5" />
+                  6. Subathon Timer
+                </button>
               </div>
 
               {/* Canvas Aspect Ratio & Mock Background */}
@@ -703,37 +835,73 @@ export default function App() {
 
                   {/* Widgets Placed in Canvas */}
                   <div className="w-full h-full relative p-3 sm:p-5 flex flex-col justify-between overflow-hidden">
-                    {/* Top Row: Leaderboard (Left) & Gift Alert (Center) */}
-                    <div className="flex items-start justify-between w-full pointer-events-auto">
-                      {(activeWidgetView === 'all' || activeWidgetView === 'leaderboard') && (
-                        <div
-                          className={`transition-all duration-200 ${
-                            activeWidgetView === 'leaderboard' ? 'w-full max-w-sm mx-auto' : 'w-64 sm:w-72'
-                          }`}
-                        >
-                          <LikeLeaderboardWidget
-                            users={leaderboard}
-                            totalLikes={totalLikes}
-                            recentHearts={recentHearts}
-                            settings={settings}
-                          />
-                        </div>
-                      )}
+                    {/* Centered Single View for Subathon */}
+                    {activeWidgetView === 'subathon' && (
+                      <div className="flex-1 flex items-center justify-center p-4">
+                        <SubathonTimerWidget
+                          seconds={subathonSeconds}
+                          initialSeconds={7200}
+                          maxCapSeconds={settings.subathonMaxCapHours > 0 ? settings.subathonMaxCapHours * 3600 : 0}
+                          isRunning={subathonIsRunning}
+                          theme={settings.subathonTheme}
+                          title={settings.subathonTitle}
+                          addedEvents={subathonEvents}
+                          showProgressBar={settings.subathonShowProgressBar}
+                          standalone={false}
+                        />
+                      </div>
+                    )}
 
-                      {/* Gift Alert Positioned at Top Center */}
-                      {(activeWidgetView === 'all' || activeWidgetView === 'gift') && (
-                        <div
-                          className={`flex-1 flex justify-center pt-2 sm:pt-4 ${
-                            activeWidgetView === 'gift' ? 'w-full my-auto' : ''
-                          }`}
-                        >
-                          <GiftOverlayWidget currentAlert={currentGiftAlert} settings={settings} />
-                        </div>
-                      )}
-                    </div>
+                    {/* Top Row: Leaderboard (Left) & Subathon Timer (Right) & Gift Alert (Center) */}
+                    {activeWidgetView !== 'subathon' && (
+                      <div className="flex items-start justify-between w-full pointer-events-auto gap-3">
+                        {(activeWidgetView === 'all' || activeWidgetView === 'leaderboard') && (
+                          <div
+                            className={`transition-all duration-200 ${
+                              activeWidgetView === 'leaderboard' ? 'w-full max-w-sm mx-auto' : 'w-60 sm:w-68 shrink-0'
+                            }`}
+                          >
+                            <LikeLeaderboardWidget
+                              users={leaderboard}
+                              totalLikes={totalLikes}
+                              recentHearts={recentHearts}
+                              settings={settings}
+                            />
+                          </div>
+                        )}
+
+                        {/* Gift Alert Positioned at Top Center */}
+                        {(activeWidgetView === 'all' || activeWidgetView === 'gift') && (
+                          <div
+                            className={`flex-1 flex justify-center pt-2 sm:pt-4 ${
+                              activeWidgetView === 'gift' ? 'w-full my-auto' : ''
+                            }`}
+                          >
+                            <GiftOverlayWidget currentAlert={currentGiftAlert} settings={settings} />
+                          </div>
+                        )}
+
+                        {/* Subathon Timer on Top Right in All Widgets Mode */}
+                        {activeWidgetView === 'all' && (
+                          <div className="w-60 sm:w-72 shrink-0">
+                            <SubathonTimerWidget
+                              seconds={subathonSeconds}
+                              initialSeconds={7200}
+                              maxCapSeconds={settings.subathonMaxCapHours > 0 ? settings.subathonMaxCapHours * 3600 : 0}
+                              isRunning={subathonIsRunning}
+                              theme={settings.subathonTheme}
+                              title={settings.subathonTitle}
+                              addedEvents={subathonEvents}
+                              showProgressBar={settings.subathonShowProgressBar}
+                              standalone={false}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Follow & Share Alert Placed at Center / Top */}
-                    {(activeWidgetView === 'all' || activeWidgetView === 'follow' || activeWidgetView === 'share' || activeWidgetView === 'alerts') && (
+                    {activeWidgetView !== 'subathon' && (activeWidgetView === 'all' || activeWidgetView === 'follow' || activeWidgetView === 'share' || activeWidgetView === 'alerts') && (
                       <div
                         className={`absolute inset-x-0 top-16 sm:top-20 flex justify-center pointer-events-none z-30 ${
                           activeWidgetView === 'follow' || activeWidgetView === 'share' ? 'my-auto' : ''
@@ -749,7 +917,7 @@ export default function App() {
                     )}
 
                     {/* Bottom Row: Chat Overlay */}
-                    {(activeWidgetView === 'all' || activeWidgetView === 'chat') && (
+                    {activeWidgetView !== 'subathon' && (activeWidgetView === 'all' || activeWidgetView === 'chat') && (
                       <div
                         className={`pointer-events-auto transition-all duration-200 ${
                           activeWidgetView === 'chat'
@@ -845,7 +1013,7 @@ export default function App() {
                   </div>
 
                   {/* Like Goal Target */}
-                  <div className="space-y-1.5 pt-2 border-t border-white/10">
+                  <div className="space-y-2 pt-2 border-t border-white/10">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-300">เป้าหมายยอดไลก์:</span>
                       <span className="font-mono font-bold text-pink-400">
@@ -861,6 +1029,21 @@ export default function App() {
                       onChange={(e) => updateSettings({ likeGoal: Number(e.target.value) })}
                       className="w-full accent-pink-500 cursor-pointer"
                     />
+
+                    {/* Like Status & Reset to 0 Button */}
+                    <div className="flex items-center justify-between gap-2 pt-0.5">
+                      <div className="text-[11px] text-slate-400">
+                        ยอดปัจจุบัน: <strong className="text-pink-300 font-mono">{totalLikes.toLocaleString()}</strong> ไลก์
+                      </div>
+                      <button
+                        onClick={handleResetLikes}
+                        className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:text-white text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                        title="รีเซ็ตยอดไลก์และกระดานอันดับเป็น 0 สำหรับเริ่มไลฟ์สดใหม่"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        รีเซ็ตเป็น 0 ไลก์
+                      </button>
+                    </div>
                   </div>
 
                   {/* Quick Copy Link for Current Focused Widget */}
@@ -911,9 +1094,28 @@ export default function App() {
                       >
                         {copiedKey === 'alerts' ? '✓ คัดลอกแล้ว' : '6. All Alerts'}
                       </button>
+                      <button
+                        onClick={() => copyWidgetUrl('subathon')}
+                        className="py-1.5 px-2 rounded-xl bg-slate-950 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+                        title="คัดลอกลิงก์ Subathon Timer Overlay สำหรับ OBS"
+                      >
+                        {copiedKey === 'subathon' ? '✓ คัดลอกแล้ว' : '7. Subathon'}
+                      </button>
                     </div>
                   </div>
                 </div>
+
+                {/* Subathon Control Card */}
+                <SubathonControlCard
+                  seconds={subathonSeconds}
+                  isRunning={subathonIsRunning}
+                  onTogglePlay={handleToggleSubathon}
+                  onAddSeconds={handleAddSubathonTime}
+                  onResetTimer={handleResetSubathonTimer}
+                  settings={settings}
+                  onUpdateSettings={updateSettings}
+                  onCopyObsUrl={(type) => copyWidgetUrl(type as any)}
+                />
 
                 {/* TTS Control Card */}
                 <ChatTtsControlCard settings={settings} onUpdateSettings={updateSettings} />
@@ -940,6 +1142,8 @@ export default function App() {
             {/* Bottom Stream Simulator Deck */}
             <StreamSimulatorDeck
               onAddLikes={handleAddLikes}
+              onResetLikes={handleResetLikes}
+              totalLikes={totalLikes}
               onSendChat={handleSendChat}
               onSendGift={handleSendGift}
               onSendFollow={handleSendTestFollow}

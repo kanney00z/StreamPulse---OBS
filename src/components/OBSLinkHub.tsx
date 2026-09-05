@@ -16,14 +16,18 @@ import {
   UserPlus,
   Share2,
   Bell,
+  Timer,
+  Flame,
+  Crown,
+  Zap,
 } from 'lucide-react';
-import { OverlayCustomSettings, ChatThemeId } from '../types';
-import { CHAT_THEMES } from '../data/mockData';
+import { OverlayCustomSettings, ChatThemeId, SubathonThemeId } from '../types';
+import { CHAT_THEMES, SUBATHON_THEMES } from '../data/mockData';
 
 interface OBSLinkHubProps {
   settings: OverlayCustomSettings;
   onUpdateSettings: (newSettings: Partial<OverlayCustomSettings>) => void;
-  onSelectPreviewTab: (tab: 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'alerts' | 'all') => void;
+  onSelectPreviewTab: (tab: 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'all') => void;
   onSelectIndoFinityTab?: () => void;
 }
 
@@ -39,7 +43,7 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
   // Get current window origin or fallback
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
-  const getOverlayUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'all') => {
+  const getOverlayUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'all') => {
     const params = new URLSearchParams();
     params.set('mode', 'overlay');
     params.set('overlay', type);
@@ -57,6 +61,9 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
         params.set('ttspitch', settings.chatTtsPitch.toString());
         params.set('ttsvol', settings.chatTtsVolume.toString());
         params.set('ttssweet', settings.chatTtsSweetEnding ? '1' : '0');
+        if (settings.chatTtsVoice && settings.chatTtsVoice !== 'default') {
+          params.set('ttsvoice', settings.chatTtsVoice);
+        }
       }
     }
 
@@ -84,6 +91,12 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
       params.set('sharetts', settings.shareTtsEnabled ? '1' : '0');
       params.set('sharedur', settings.shareDuration.toString());
       params.set('sharestyle', settings.shareStyle);
+    }
+
+    if (type === 'subathon') {
+      params.set('subathontheme', settings.subathonTheme);
+      params.set('subathontitle', settings.subathonTitle);
+      params.set('subathoncap', settings.subathonMaxCapHours.toString());
     }
 
     return `${origin}?${params.toString()}`;
@@ -722,6 +735,118 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
             </button>
             <a
               href={getOverlayUrl('share')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-1.5 text-center text-slate-400 hover:text-slate-200 text-xs flex items-center justify-center gap-1 transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              <span>เปิดทดสอบ</span>
+            </a>
+          </div>
+        </div>
+
+        {/* Card 6: Subathon Timer Overlay */}
+        <div className="p-5 rounded-3xl bg-slate-900/80 border border-white/10 hover:border-cyan-500/50 flex flex-col lg:flex-row items-start lg:items-center gap-6 relative group overflow-hidden transition-all shadow-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-pink-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+          {/* Mini Mock Screen */}
+          <div className="w-full sm:w-44 h-28 bg-slate-950 rounded-xl border border-white/10 flex flex-col items-center justify-center relative overflow-hidden shrink-0 p-2.5">
+            <div className="text-xs font-mono font-bold text-cyan-400 mb-1">02:00:00</div>
+            <div className="text-[10px] font-bold text-slate-200 bg-cyan-500/20 px-2 py-0.5 rounded-full border border-cyan-500/30 flex items-center gap-1">
+              <Timer className="w-2.5 h-2.5 text-cyan-400" />
+              <span>SUBATHON</span>
+            </div>
+            <div className="w-28 h-1 bg-slate-800 rounded-full mt-2 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-cyan-400 to-pink-500 w-3/4 rounded-full" />
+            </div>
+            <div className="absolute bottom-1 right-2 text-[9px] font-mono text-slate-500">560x200</div>
+          </div>
+
+          {/* Card Info & Customizer */}
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-cyan-400 text-xs font-bold uppercase tracking-widest">Marathon • หมวดหมู่ 6</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-bold">
+                6 ธีมภาพเคลื่อนไหว
+              </span>
+            </div>
+            <h4 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+              <Timer className="w-5 h-5 text-cyan-400" />
+              6. Subathon Timer (นาฬิกาจับเวลามาราธอน เพิ่มเวลาอัตโนมัติ)
+            </h4>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              นาฬิกานับถอยหลังไลฟ์มาราธอน เพิ่มเวลาอัตโนมัติเมื่อมีคนส่งของขวัญ / เคาะจอ / กดติดตาม / กดแชร์ พร้อมเสียงและ Floating Alert
+            </p>
+
+            {/* Theme Selector Pills */}
+            <div className="flex items-center gap-3 text-xs pt-1 flex-wrap text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <span>เลือกธีม:</span>
+                <select
+                  value={settings.subathonTheme}
+                  onChange={(e) =>
+                    onUpdateSettings({
+                      subathonTheme: e.target.value as SubathonThemeId,
+                    })
+                  }
+                  className="bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-cyan-300 font-bold focus:outline-none focus:border-cyan-400"
+                >
+                  {SUBATHON_THEMES.map((th) => (
+                    <option key={th.id} value={th.id}>
+                      {th.name} ({th.nameTh})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span>เพิ่มเวลาอัตโนมัติ:</span>
+                <span
+                  className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                    settings.subathonAutoAdd
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : 'bg-slate-950 text-slate-400 border border-white/10'
+                  }`}
+                >
+                  {settings.subathonAutoAdd ? 'เปิดอยู่' : 'ปิด'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span>ขนาดแนะนำ:</span>
+                <span className="font-mono text-[11px] text-cyan-300 bg-cyan-400/10 px-2 py-0.5 rounded border border-cyan-400/20">
+                  560 × 200 px
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-row lg:flex-col gap-2 w-full lg:w-auto shrink-0 justify-end">
+            <button
+              onClick={() => onSelectPreviewTab('subathon')}
+              className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>Customize</span>
+            </button>
+            <button
+              onClick={() => copyToClipboard(getOverlayUrl('subathon'), 'subathon')}
+              className="px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(6,182,212,0.15)] cursor-pointer"
+            >
+              {copiedKey === 'subathon' ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
+                  <span className="text-emerald-400">คัดลอกสำเร็จ!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  <span>Copy Subathon Link</span>
+                </>
+              )}
+            </button>
+            <a
+              href={getOverlayUrl('subathon')}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-1.5 text-center text-slate-400 hover:text-slate-200 text-xs flex items-center justify-center gap-1 transition-colors"

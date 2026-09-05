@@ -13,12 +13,15 @@ import {
   Flame,
   UserPlus,
   Share2,
+  RotateCcw,
 } from 'lucide-react';
 import { GIFT_ITEMS, SIMULATION_NAMES, RANDOM_CHAT_PHRASES } from '../data/mockData';
 import { GiftItem } from '../types';
 
 interface StreamSimulatorDeckProps {
   onAddLikes: (count: number) => void;
+  onResetLikes?: () => void;
+  totalLikes?: number;
   onSendChat: (customText?: string) => void;
   onSendGift: (gift: GiftItem, combo?: number) => void;
   onSendFollow?: (username?: string) => void;
@@ -36,6 +39,8 @@ interface StreamSimulatorDeckProps {
 
 export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
   onAddLikes,
+  onResetLikes,
+  totalLikes = 0,
   onSendChat,
   onSendGift,
   onSendFollow,
@@ -166,9 +171,24 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
                 เคาะจอไลก์
               </span>
             </div>
-            <p className="text-xs text-slate-400 mb-3">
+            <p className="text-xs text-slate-400 mb-2">
               จำลองคนดูเคาะจอกดหัวใจ มีแอนิเมชันหัวใจลอย & อัปเดตอันดับ
             </p>
+            <div className="flex items-center justify-between text-[11px] mb-3 px-2 py-1 rounded-lg bg-slate-900 border border-white/5">
+              <span className="text-slate-400">
+                ไลก์ขณะนี้: <strong className="text-pink-300 font-mono">{totalLikes.toLocaleString()}</strong>
+              </span>
+              {onResetLikes && (
+                <button
+                  onClick={onResetLikes}
+                  className="flex items-center gap-1 text-[10px] text-rose-300 hover:text-white bg-rose-500/20 hover:bg-rose-500/30 px-2 py-0.5 rounded border border-rose-500/30 font-bold transition-all cursor-pointer active:scale-95"
+                  title="รีเซ็ตยอดไลก์เป็น 0 (เริ่มไลฟ์ใหม่)"
+                >
+                  <RotateCcw className="w-2.5 h-2.5" />
+                  รีเซ็ตเป็น 0
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2">

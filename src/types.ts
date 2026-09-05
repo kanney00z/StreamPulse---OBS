@@ -1,3 +1,33 @@
+export type SubathonThemeId =
+  | 'cyberpunk-neon'
+  | 'gold-luxury'
+  | 'kawaii-pastel'
+  | 'retro-arcade'
+  | 'midnight-minimal'
+  | 'magma-flame';
+
+export interface SubathonThemeConfig {
+  id: SubathonThemeId;
+  name: string;
+  nameTh: string;
+  badge: string;
+  accentColor: string;
+  previewClass: string;
+  containerClass: string;
+  timerDigitClass: string;
+  labelClass: string;
+  progressBarClass: string;
+  iconName: string;
+}
+
+export interface SubathonTimeAddedEvent {
+  id: string;
+  seconds: number;
+  reason: string;
+  senderName?: string;
+  timestamp: number;
+}
+
 export type ChatThemeId =
   | 'cyberpunk-neon'
   | 'minimal-glass'
@@ -112,14 +142,14 @@ export interface OverlayCustomSettings {
   chatSoundEnabled: boolean;
   chatMaxMessages: number;
 
-  // TTS (Text-to-Speech อ่านแชทสดอัตโนมัติ เสียงหวานใส)
+  // TTS (Text-to-Speech อ่านแชทสดอัตโนมัติ ปรับแต่งเสียงได้หลากหลาย)
   chatTtsEnabled: boolean;
   chatTtsFormat: 'sweet' | 'nameAndMessage' | 'messageOnly';
-  chatTtsSpeed: number; // 0.8 - 1.5
-  chatTtsPitch: number; // 0.8 - 1.6 (1.20 - 1.25 ให้เสียงหวานใส)
+  chatTtsSpeed: number; // 0.7 - 1.5 (0.95 - 1.00 สำหรับเสียงพูดปกติ ไม่เร็วเกิน)
+  chatTtsPitch: number; // 0.7 - 1.5 (1.00 สำหรับเสียงปกติ, 0.95 สำหรับเสียงผู้ชาย, 1.15 สำหรับเสียงหวาน)
   chatTtsVolume: number; // 0 - 100
-  chatTtsVoice: string; // 'default' or voiceURI
-  chatTtsTonePreset: 'sweet' | 'cute' | 'soft' | 'natural' | 'custom';
+  chatTtsVoice: string; // 'default' | 'male_auto' | 'female_auto' | 'normal_auto' | voiceURI
+  chatTtsTonePreset: 'normal' | 'male' | 'female-natural' | 'sweet' | 'cute' | 'soft' | 'natural' | 'custom';
   chatTtsSkipSpam: boolean;
   chatTtsSweetEnding: boolean; // เติมเสียงลงท้ายน่ารัก เช่น "ค่า~"
 
@@ -156,6 +186,18 @@ export interface OverlayCustomSettings {
   // Counters
   streamFollowCount: number;
   streamShareCount: number;
+
+  // Subathon Timer (โหมดจับเวลามาราธอน หลากหลายธีม)
+  subathonTheme: SubathonThemeId;
+  subathonTitle: string;
+  subathonAutoAdd: boolean;
+  subathonAddPerFollow: number; // e.g. 30 seconds
+  subathonAddPerShare: number; // e.g. 15 seconds
+  subathonAddPer100Likes: number; // e.g. 10 seconds
+  subathonAddPerCoin: number; // e.g. 1 second per 1 coin
+  subathonMaxCapHours: number; // 0 = unlimited, or 6, 12, 24
+  subathonShowProgressBar: boolean;
+  subathonSoundEnabled: boolean;
 }
 
 export type IndoFinityConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';

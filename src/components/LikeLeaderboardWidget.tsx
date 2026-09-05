@@ -134,7 +134,31 @@ export const LikeLeaderboardWidget: React.FC<LikeLeaderboardWidgetProps> = ({
           </div>
         )}
 
-        {/* Podium View for Top 3 (if style is podium-card) */}
+        {/* Empty State when no one has liked yet */}
+        {topUsers.length === 0 && (
+          <div className="bg-neutral-950/80 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-lg flex flex-col items-center justify-center text-center gap-3 animate-fadeIn">
+            <div className="relative">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500/20 to-pink-500/10 border border-rose-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(244,63,94,0.25)]">
+                <Heart className="w-7 h-7 text-rose-400 fill-rose-500/30 animate-pulse" />
+              </div>
+              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-pink-500"></span>
+              </span>
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-white">รอคนดูเคาะจอกดหัวใจ</h4>
+              <p className="text-xs text-neutral-400 leading-relaxed max-w-[220px]">
+                ยังไม่มีใครกดไลก์ เคาะหน้าจอตอนนี้เพื่อขึ้นสู่อันดับ 1 👑
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] text-rose-300 font-medium">
+              <span>💖 แตะหน้าจอ 2 ครั้งเพื่อส่งไลก์</span>
+            </div>
+          </div>
+        )}
+
+        {/* Podium View for Top 3 (if style is podium-card and >= 3 likers) */}
         {settings.likeStyle === 'podium-card' && topUsers.length >= 3 && (
           <div className="bg-neutral-950/80 backdrop-blur-xl p-3.5 rounded-2xl border border-white/10 shadow-lg">
             <div className="flex items-end justify-center gap-2 pt-4 pb-2">
@@ -214,40 +238,45 @@ export const LikeLeaderboardWidget: React.FC<LikeLeaderboardWidgetProps> = ({
           </div>
         )}
 
-        {/* User Rank List (Rank 1 to N, or Rank 4+ if podium is active) */}
-        <div className="space-y-1.5">
-          {(settings.likeStyle === 'podium-card' ? topUsers.slice(3) : topUsers).map((user) => (
-            <motion.div
-              key={user.id}
-              layout
-              initial={{ opacity: 0, x: -15 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl backdrop-blur-md transition-all ${
-                user.rank === 1
-                  ? 'bg-amber-500/15 border border-amber-500/40 shadow-[0_0_12px_rgba(251,191,36,0.2)]'
-                  : 'bg-neutral-950/75 border border-white/10 hover:border-white/20'
-              }`}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                {rankBadge(user.rank)}
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  referrerPolicy="no-referrer"
-                  className="w-7 h-7 rounded-full object-cover border border-white/20 shrink-0"
-                />
-                <span className="text-xs font-medium text-neutral-100 truncate">{user.name}</span>
-              </div>
+        {/* User Rank List (Rank 1 to N if podium is active and <3, or Rank 4+ if podium is active and >=3) */}
+        {topUsers.length > 0 && (
+          <div className="space-y-1.5">
+            {((settings.likeStyle === 'podium-card' && topUsers.length >= 3)
+              ? topUsers.slice(3)
+              : topUsers
+            ).map((user) => (
+              <motion.div
+                key={user.id}
+                layout
+                initial={{ opacity: 0, x: -15 }}
+                animate={{ opacity: 1, x: 0 }}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl backdrop-blur-md transition-all ${
+                  user.rank === 1
+                    ? 'bg-amber-500/15 border border-amber-500/40 shadow-[0_0_12px_rgba(251,191,36,0.2)]'
+                    : 'bg-neutral-950/75 border border-white/10 hover:border-white/20'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {rankBadge(user.rank)}
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    referrerPolicy="no-referrer"
+                    className="w-7 h-7 rounded-full object-cover border border-white/20 shrink-0"
+                  />
+                  <span className="text-xs font-medium text-neutral-100 truncate">{user.name}</span>
+                </div>
 
-              <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                <span className="text-xs font-bold text-rose-300">
-                  {user.likeCount.toLocaleString()}
-                </span>
-                <Heart className="w-3 h-3 text-rose-400 fill-rose-400" />
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <span className="text-xs font-bold text-rose-300">
+                    {user.likeCount.toLocaleString()}
+                  </span>
+                  <Heart className="w-3 h-3 text-rose-400 fill-rose-400" />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

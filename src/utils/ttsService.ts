@@ -1,13 +1,14 @@
 // Text-To-Speech (TTS) Engine for Reading Live TikTok/Stream Chat Aloud
-// Specially tuned for Sweet, Clear, and Bright Thai speech (เสียงไทยหวานใส)
+// Supports diverse voices: Female (เสียงผู้หญิงธรรมชาติ / สาวหวาน), Male (เสียงหนุ่มสุภาพ), Normal (ไม่เร็วเกิน ฟังสบาย)
 
 export interface TTSOptions {
   enabled: boolean;
   format: 'sweet' | 'nameAndMessage' | 'messageOnly';
-  rate: number; // 0.8 - 1.5 (default 1.05)
-  pitch: number; // 0.8 - 1.6 (default 1.22 for bright, sweet feminine voice)
+  rate: number; // 0.70 - 1.30 (0.84 - 0.88 = พูดปกติ ไม่เร็วเกิน ฟังสบาย เป็นธรรมชาติ)
+  pitch: number; // 0.70 - 1.50 (1.00 = ปกติ, 1.05 = หญิงธรรมชาติ, 1.18 = หวานใส, 0.94 = ทุ้มหนุ่ม)
   volume: number; // 0 - 100 (default 90)
-  voiceURI: string; // 'default' or specific voice.voiceURI
+  voiceURI: string; // 'female_auto' | 'male_auto' | 'sweet_auto' | 'default' | specific voiceURI
+  genderPreference?: 'female' | 'male' | 'all';
   skipCommands: boolean; // skip messages starting with ! or /
   cleanSpam: boolean; // shorten 55555555 to 555
   sweetEnding: boolean; // add cute sweet particle เช่น "ค่า~"
@@ -18,19 +19,28 @@ export interface TTSVoiceOption {
   lang: string;
   voiceURI: string;
   isThai: boolean;
+  isMale: boolean;
   isSweetRecommended: boolean;
   isDefault: boolean;
+  gender: 'female' | 'male' | 'neutral';
   badgeLabel?: string;
 }
 
-// Known high-quality sweet/feminine Thai voices in modern browsers & OS
-const SWEET_THAI_VOICE_KEYWORDS = [
-  'premwadee', // Microsoft Premwadee Natural (Windows/Edge) - top tier sweet Thai voice
-  'achara',    // Microsoft Achara
-  'google ภาษาไทย', // Google Chrome Thai female voice
-  'narisa',    // Apple macOS/iOS Thai female voice
-  'kanya',     // Apple alternative
+// Known Thai voice keywords across Windows (Edge), Chrome, macOS/iOS, and Android
+const MALE_THAI_KEYWORDS = ['niwat', 'pattara', 'male', 'man', 'boy', 'ชาย', 'หนุ่ม'];
+const FEMALE_THAI_KEYWORDS = [
+  'premwadee',
+  'achara',
+  'google ภาษาไทย',
+  'google thai',
+  'narisa',
+  'kanya',
+  'siri',
   'female',
+  'woman',
+  'girl',
+  'หญิง',
+  'สาว',
 ];
 
 class TTSEngine {
@@ -42,14 +52,15 @@ class TTSEngine {
 
   public options: TTSOptions = {
     enabled: true,
-    format: 'sweet',
-    rate: 1.05,
-    pitch: 1.22, // 1.20 - 1.25 gives the bright, sweet, cheerful tone
+    format: 'nameAndMessage',
+    rate: 0.86, // จังหวะพูดปกติ ไม่เร็วเกิน ฟังสบาย ชัดถ้อยชัดคำ (แนะนำที่สุดสำหรับภาษาไทย)
+    pitch: 1.05, // โทนเสียงพูดผู้หญิงปกติธรรมชาติ
     volume: 90,
-    voiceURI: 'default',
+    voiceURI: 'female_auto', // แนะนำเริ่มต้นเป็นเสียงผู้หญิงตามที่สตรีมเมอร์ต้องการ
+    genderPreference: 'female',
     skipCommands: true,
     cleanSpam: true,
-    sweetEnding: true,
+    sweetEnding: false,
   };
 
   constructor() {
@@ -67,14 +78,38 @@ class TTSEngine {
     this.voicesLoaded = this.voices.length > 0;
   }
 
-  // Detect whether a voice is a sweet female voice
-  public isSweetVoice(voice: SpeechSynthesisVoice): boolean {
+  // Detect whether a voice is Male
+  public isMaleVoice(voice: SpeechSynthesisVoice): boolean {
+    const nameLower = voice.name.toLowerCase();
+    return MALE_THAI_KEYWORDS.some((kw) => nameLower.includes(kw));
+  }
+
+  // Detect whether a voice is Female
+  public isFemaleVoice(voice: SpeechSynthesisVoice): boolean {
     const nameLower = voice.name.toLowerCase();
     const langLower = voice.lang.toLowerCase();
     const isThai = langLower.startsWith('th');
 
-    if (!isThai) return false;
-    return SWEET_THAI_VOICE_KEYWORDS.some((kw) => nameLower.includes(kw));
+    if (this.isMaleVoice(voice)) return false;
+    if (FEMALE_THAI_KEYWORDS.some((kw) => nameLower.includes(kw))) return true;
+
+    // Google ภาษาไทย in Chrome is standard Female voice
+    if (nameLower.includes('google') && isThai) return true;
+
+    // Default Thai voices that are not labeled male are usually female
+    return isThai;
+  }
+
+  // Detect whether a voice is sweet female voice
+  public isSweetVoice(voice: SpeechSynthesisVoice): boolean {
+    if (this.isMaleVoice(voice)) return false;
+    const nameLower = voice.name.toLowerCase();
+    return (
+      nameLower.includes('premwadee') ||
+      nameLower.includes('google') ||
+      nameLower.includes('narisa') ||
+      nameLower.includes('achara')
+    );
   }
 
   public getAvailableVoices(): TTSVoiceOption[] {
@@ -85,19 +120,31 @@ class TTSEngine {
 
     return this.voices.map((v) => {
       const isThai = v.lang.toLowerCase().startsWith('th');
+      const isMale = this.isMaleVoice(v);
+      const isFemale = this.isFemaleVoice(v);
       const isSweet = this.isSweetVoice(v);
+      const gender: 'female' | 'male' | 'neutral' = isFemale ? 'female' : isMale ? 'male' : 'neutral';
 
       let badgeLabel = undefined;
-      if (v.name.toLowerCase().includes('premwadee')) {
-        badgeLabel = '🌸 พรีเมียมหวานใส (Premwadee Natural)';
-      } else if (v.name.toLowerCase().includes('google')) {
-        badgeLabel = '🌸 Google หวานใส ชัดเจน';
-      } else if (v.name.toLowerCase().includes('narisa') || v.name.toLowerCase().includes('kanya')) {
-        badgeLabel = '🌸 Apple นุ่มหวาน';
-      } else if (isSweet) {
-        badgeLabel = '🌸 โทนเสียงหวานใส';
+      const n = v.name.toLowerCase();
+      if (n.includes('premwadee')) {
+        badgeLabel = '👩 หญิงธรรมชาติ ฟังสบาย (Microsoft Premwadee Natural)';
+      } else if (n.includes('google') && isThai) {
+        badgeLabel = '👩 หญิงไทย Google ชัดเจน นุ่มนวล (Google ภาษาไทย)';
+      } else if (n.includes('achara')) {
+        badgeLabel = '👩 หญิงไทย ชัดถ้อยชัดคำ (Microsoft Achara)';
+      } else if (n.includes('narisa') || n.includes('kanya')) {
+        badgeLabel = '👩 หญิงไทย Apple นุ่มนวล (Narisa/Kanya)';
+      } else if (n.includes('niwat')) {
+        badgeLabel = '👨 หนุ่มสุภาพ ฟังสบาย (Microsoft Niwat Natural)';
+      } else if (n.includes('pattara')) {
+        badgeLabel = '👨 ชายไทย ชัดเจน (Microsoft Pattara)';
+      } else if (isFemale && isThai) {
+        badgeLabel = '👩 เสียงผู้หญิง ภาษาไทย';
+      } else if (isMale && isThai) {
+        badgeLabel = '👨 เสียงผู้ชาย ภาษาไทย';
       } else if (isThai) {
-        badgeLabel = '🇹🇭 ภาษาไทย';
+        badgeLabel = '🇹🇭 ภาษาไทย มาตรฐาน';
       }
 
       return {
@@ -105,18 +152,20 @@ class TTSEngine {
         lang: v.lang,
         voiceURI: v.voiceURI,
         isThai,
+        isMale,
         isSweetRecommended: isSweet,
         isDefault: v.default,
+        gender,
         badgeLabel,
       };
     }).sort((a, b) => {
-      // 1. Sweet Thai voices first
-      if (a.isSweetRecommended && !b.isSweetRecommended) return -1;
-      if (!a.isSweetRecommended && b.isSweetRecommended) return 1;
-
-      // 2. Any other Thai voices
+      // 1. Thai voices first
       if (a.isThai && !b.isThai) return -1;
       if (!a.isThai && b.isThai) return 1;
+
+      // 2. Female Thai voices first (Premwadee, Google Thai Female)
+      if (a.gender === 'female' && b.gender !== 'female') return -1;
+      if (a.gender !== 'female' && b.gender === 'female') return 1;
 
       return a.name.localeCompare(b.name);
     });
@@ -138,9 +187,9 @@ class TTSEngine {
     }
 
     // 2. Remove URLs
-    cleaned = cleaned.replace(/https?:\/\/\S+/gi, 'ลิงก์');
+    cleaned = cleaned.replace(/https?:\/\/\S+/gi, ' ลิงก์ ');
 
-    // 3. Shorten repeated numbers and Thai characters (e.g. 5555555555 -> ห้าห้าห้า, ฮ่าๆๆๆๆๆ -> ฮ่าๆๆ)
+    // 3. Shorten repeated numbers and Thai characters (e.g. 5555555555 -> 555, ฮ่าๆๆๆๆๆ -> ฮ่าๆๆ)
     if (this.options.cleanSpam) {
       cleaned = cleaned.replace(/5{3,}/g, ' 555 ');
       cleaned = cleaned.replace(/(.)\1{3,}/gu, '$1$1');
@@ -210,12 +259,13 @@ class TTSEngine {
 
     let text = sampleText;
     if (!text) {
-      if (this.options.format === 'sweet') {
-        text = 'คุณ สมชาย บอกว่า: สวัสดีค่ะ ยินดีต้อนรับสู่ไลฟ์สตรีมนะคะ ขอให้สนุกกับไลฟ์ค่า';
-      } else if (this.options.format === 'nameAndMessage') {
-        text = 'คุณ สมชาย พูดว่า: สวัสดีครับ ยินดีต้อนรับสู่ไลฟ์สตรีมครับ';
+      const isFemale = this.options.voiceURI === 'female_auto' || this.options.voiceURI === 'sweet_auto' || this.options.genderPreference === 'female';
+      if (this.options.format === 'sweet' || this.options.sweetEnding) {
+        text = 'คุณ แซนดี้ บอกว่า: สวัสดีค่ะ ยินดีต้อนรับสู่ไลฟ์สตรีมนะคะ ขอให้สนุกกับไลฟ์ค่า';
+      } else if (isFemale) {
+        text = 'คุณ ชาลิดา พูดว่า: สวัสดีค่ะ ยินดีต้อนรับสู่ไลฟ์สตรีมนะคะ พูดจังหวะปกติ ฟังสบาย ไม่เร็วเกินไปค่ะ';
       } else {
-        text = 'ยินดีต้อนรับสู่ไลฟ์สตรีมค่า ระบบอ่านแชทเสียงหวานใสพร้อมทำงานแล้วนะคะ';
+        text = 'คุณ สมชาย พูดว่า: สวัสดีครับ ยินดีต้อนรับสู่ไลฟ์สตรีมครับ พูดจังหวะปกติ ฟังสบาย ไม่เร็วเกินไปครับ';
       }
     }
 
@@ -231,38 +281,81 @@ class TTSEngine {
     if (!nextText) return;
 
     try {
-      // Resume if browser suspended speech synthesis
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
       }
 
       const utterance = new SpeechSynthesisUtterance(nextText);
-      // Bound rate and pitch
-      utterance.rate = Math.min(Math.max(this.options.rate, 0.5), 1.8);
-      utterance.pitch = Math.min(Math.max(this.options.pitch, 0.6), 1.8);
+
+      // Safe Rate Bounds:
+      // User request: "พูดแบบปกติอย่าเร็วเกิน" -> default 0.84 - 0.88, clamped between 0.65 and 1.30
+      const targetRate = this.options.rate || 0.86;
+      utterance.rate = Math.min(Math.max(targetRate, 0.65), 1.30);
       utterance.volume = Math.min(Math.max(this.options.volume / 100, 0), 1);
 
-      // Select voice:
       if (this.voices.length === 0) {
         this.loadVoices();
       }
 
       let selectedVoice: SpeechSynthesisVoice | undefined;
+      const targetUri = this.options.voiceURI || 'female_auto';
+      let requiresFemalePitchLift = false;
 
-      // 1. If user explicitly specified a voice URI
-      if (this.options.voiceURI && this.options.voiceURI !== 'default') {
-        selectedVoice = this.voices.find((v) => v.voiceURI === this.options.voiceURI);
+      // 1. Explicit voice picked by user
+      if (targetUri !== 'default' && !targetUri.endsWith('_auto')) {
+        selectedVoice = this.voices.find((v) => v.voiceURI === targetUri);
       }
 
-      // 2. If 'default' or not found, try finding best sweet recommended Thai voice first
-      if (!selectedVoice) {
-        selectedVoice = this.voices.find((v) => this.isSweetVoice(v));
+      // 2. Automatic Female Thai Voice ('female_auto' or 'sweet_auto')
+      if (!selectedVoice && (targetUri === 'female_auto' || targetUri === 'sweet_auto' || targetUri === 'default')) {
+        // Prioritize Premwadee, Google ภาษาไทย, Achara, Narisa, Kanya
+        selectedVoice = this.voices.find((v) => {
+          const l = v.lang.toLowerCase();
+          const n = v.name.toLowerCase();
+          return l.startsWith('th') && (n.includes('premwadee') || n.includes('google') || n.includes('achara') || n.includes('narisa') || n.includes('kanya'));
+        });
+
+        // Any non-male Thai voice
+        if (!selectedVoice) {
+          selectedVoice = this.voices.find((v) => v.lang.toLowerCase().startsWith('th') && !this.isMaleVoice(v));
+        }
+
+        // If OS only has male voices installed (e.g. Windows only bundled Niwat offline)
+        if (!selectedVoice) {
+          selectedVoice = this.voices.find((v) => v.lang.toLowerCase().startsWith('th'));
+          if (selectedVoice && this.isMaleVoice(selectedVoice)) {
+            // Male voice fallback -> apply pitch modulation so it sounds female
+            requiresFemalePitchLift = true;
+          }
+        }
       }
 
-      // 3. Fallback to any Thai voice
+      // 3. Automatic Male Thai Voice ('male_auto')
+      if (!selectedVoice && targetUri === 'male_auto') {
+        selectedVoice = this.voices.find((v) => {
+          const l = v.lang.toLowerCase();
+          const n = v.name.toLowerCase();
+          return l.startsWith('th') && (n.includes('niwat') || n.includes('pattara') || this.isMaleVoice(v));
+        });
+
+        // Fallback to any Thai voice
+        if (!selectedVoice) {
+          selectedVoice = this.voices.find((v) => v.lang.toLowerCase().startsWith('th'));
+        }
+      }
+
+      // 4. Final Fallback to any Thai voice in system
       if (!selectedVoice) {
         selectedVoice = this.voices.find((v) => v.lang.toLowerCase().startsWith('th'));
       }
+
+      // Compute Pitch:
+      let effectivePitch = this.options.pitch || 1.05;
+      if (requiresFemalePitchLift) {
+        // Elevate pitch into clear feminine tone when only male engine is installed
+        effectivePitch = Math.max(effectivePitch, 1.25);
+      }
+      utterance.pitch = Math.min(Math.max(effectivePitch, 0.70), 1.50);
 
       if (selectedVoice) {
         utterance.voice = selectedVoice;
@@ -273,7 +366,6 @@ class TTSEngine {
 
       this.isSpeaking = true;
 
-      // Chrome speech synthesis watchdog: reset if utterance hangs for too long
       if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
       this.watchdogTimer = setTimeout(() => {
         if (this.isSpeaking && window.speechSynthesis.speaking) {
@@ -284,10 +376,9 @@ class TTSEngine {
       utterance.onend = () => {
         this.isSpeaking = false;
         if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
-        // Delay slightly for natural breathing space between comments
         setTimeout(() => {
           this.processQueue();
-        }, 120);
+        }, 140);
       };
 
       utterance.onerror = () => {
@@ -295,7 +386,7 @@ class TTSEngine {
         if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
         setTimeout(() => {
           this.processQueue();
-        }, 80);
+        }, 90);
       };
 
       window.speechSynthesis.speak(utterance);
@@ -323,3 +414,4 @@ class TTSEngine {
 
 // Global Singleton Instance
 export const ttsService = new TTSEngine();
+
