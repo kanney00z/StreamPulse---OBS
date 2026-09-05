@@ -98,7 +98,7 @@ export default function App() {
     chatTtsSpeed: 0.86, // จังหวะปกติ ไม่เร็วเกิน ชัดเจน ฟังสบาย เป็นธรรมชาติ
     chatTtsPitch: 1.05, // โทนเสียงพูดผู้หญิงธรรมชาติ ฟังสบาย
     chatTtsVolume: 90,
-    chatTtsVoice: 'female_auto',
+    chatTtsVoice: 'ai_female_kore',
     chatTtsTonePreset: 'female-natural',
     chatTtsSkipSpam: true,
     chatTtsSweetEnding: false,

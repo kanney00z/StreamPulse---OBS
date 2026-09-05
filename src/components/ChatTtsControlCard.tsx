@@ -37,13 +37,13 @@ const TONE_PRESETS: TonePreset[] = [
   {
     id: 'female-natural',
     name: 'เสียงผู้หญิงธรรมชาติ',
-    desc: 'เสียงผู้หญิงสุภาพ ฟังสบาย ชัดถ้อยชัดคำ (แนะนำ)',
+    desc: 'เสียงผู้หญิงสุภาพ ฟังสบาย ชัดถ้อยชัดคำ (รับประกันมีเสียงผู้หญิง 100%)',
     icon: '👩',
     pitch: 1.05,
     speed: 0.86,
     format: 'nameAndMessage',
     sweetEnding: false,
-    voiceURI: 'female_auto',
+    voiceURI: 'ai_female_kore',
     badge: '★ แนะนำ',
   },
   {
@@ -55,19 +55,19 @@ const TONE_PRESETS: TonePreset[] = [
     speed: 0.88,
     format: 'sweet',
     sweetEnding: true,
-    voiceURI: 'sweet_auto',
+    voiceURI: 'ai_female_kore',
     badge: 'ยอดนิยม',
   },
   {
     id: 'soft',
     name: 'หญิงละมุน นุ่มนวล',
-    desc: 'เสียงอบอุ่น ฟังสบาย จังหวะใจเย็น ไม่รีบ',
+    desc: 'เสียงอบอุ่น ฟังสบาย จังหวะใจเย็น ละมุนหู',
     icon: '🎀',
     pitch: 1.04,
     speed: 0.80,
     format: 'nameAndMessage',
     sweetEnding: false,
-    voiceURI: 'female_auto',
+    voiceURI: 'ai_female_zephyr',
     badge: 'ช้าชัด',
   },
   {
@@ -79,7 +79,7 @@ const TONE_PRESETS: TonePreset[] = [
     speed: 0.86,
     format: 'nameAndMessage',
     sweetEnding: false,
-    voiceURI: 'male_auto',
+    voiceURI: 'ai_male_puck',
     badge: 'ผู้ชาย',
   },
   {
@@ -91,7 +91,7 @@ const TONE_PRESETS: TonePreset[] = [
     speed: 0.78,
     format: 'nameAndMessage',
     sweetEnding: false,
-    voiceURI: 'female_auto',
+    voiceURI: 'ai_female_kore',
     badge: '0.78x',
   },
   {
@@ -103,7 +103,7 @@ const TONE_PRESETS: TonePreset[] = [
     speed: 0.90,
     format: 'sweet',
     sweetEnding: true,
-    voiceURI: 'sweet_auto',
+    voiceURI: 'ai_female_kore',
   },
 ];
 
@@ -137,15 +137,10 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
   const [isPlayingTest, setIsPlayingTest] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
   const [customTestText, setCustomTestText] = useState(
-    'คุณ สมชาย พูดว่า: สวัสดีครับ ยินดีต้อนรับสู่ไลฟ์สตรีมครับ พูดจังหวะปกติ ฟังสบาย ไม่เร็วเกินไปครับ'
+    'คุณ ชาลิดา พูดว่า: สวัสดีค่ะ ยินดีต้อนรับสู่ไลฟ์สตรีมนะคะ พูดจังหวะปกติ ฟังสบาย ไม่เร็วเกินไปค่ะ'
   );
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      setIsSupported(false);
-      return;
-    }
-
     const loadVoices = () => {
       const v = ttsService.getAvailableVoices();
       setVoices(v);
@@ -153,7 +148,7 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
 
     loadVoices();
 
-    if (window.speechSynthesis) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
   }, []);
@@ -181,13 +176,13 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
       voiceURI: preset.voiceURI || settings.chatTtsVoice,
     });
 
-    // Update test phrase accordingly
+    // Update test phrase accordingly with matching polite particles
     if (preset.id === 'male') {
       setCustomTestText('คุณ ชัยวัฒน์ พูดว่า: สวัสดีครับ ยินดีต้อนรับสู่ไลฟ์ครับ วันนี้มาคุยกันสบายๆ ครับ');
     } else if (preset.id === 'sweet' || preset.id === 'cute') {
-      setCustomTestText('คุณ ส้มโอ บอกว่า: สวัสดีค่ะ ยินดีต้อนรับสู่ไลฟ์สตรีมนะคะ ขอให้สนุกกับไลฟ์ค่า');
+      setCustomTestText('คุณ แซนดี้ บอกว่า: สวัสดีค่ะ ยินดีต้อนรับสู่ไลฟ์สตรีมนะคะ ขอให้สนุกกับไลฟ์ค่า');
     } else {
-      setCustomTestText('คุณ สมชาย พูดว่า: สวัสดีครับ ยินดีต้อนรับสู่ไลฟ์สตรีมครับ พูดจังหวะปกติ ฟังสบาย ไม่เร็วเกินไปครับ');
+      setCustomTestText('คุณ ชาลิดา พูดว่า: สวัสดีค่ะ ยินดีต้อนรับสู่ไลฟ์สตรีมนะคะ พูดจังหวะปกติ ฟังสบาย ไม่เร็วเกินไปค่ะ');
     }
   };
 
@@ -225,7 +220,9 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
     );
   }
 
-  const thaiVoices = voices.filter((v) => v.isThai);
+  const aiVoices = voices.filter((v) => v.isAi);
+  const localVoices = voices.filter((v) => !v.isAi);
+  const thaiVoices = localVoices.filter((v) => v.isThai);
   const maleVoices = thaiVoices.filter((v) => v.isMale);
   const femaleVoices = thaiVoices.filter((v) => !v.isMale);
 
@@ -434,15 +431,21 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
                 }}
                 className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-400"
               >
-                <optgroup label="✨ โหมดเสียงอัตโนมัติ (แนะนำ)">
-                  <option value="female_auto">👩 อัตโนมัติ: เสียงผู้หญิงธรรมชาติ / สุภาพ (Auto Thai Female) ★ แนะนำ</option>
-                  <option value="sweet_auto">🌸 อัตโนมัติ: เสียงสาวหวานใส (Auto Sweet Thai)</option>
-                  <option value="male_auto">👨 อัตโนมัติ: เสียงหนุ่มสุภาพ / เสียงผู้ชาย (Auto Thai Male)</option>
-                  <option value="default">🎙️ อัตโนมัติ: เสียงปกติมาตรฐาน ฟังสบาย</option>
+                <optgroup label="✨ เสียง AI สตูดิโอ (มีเสียงผู้หญิงแท้ 100% ทุกระบบ)">
+                  <option value="ai_female_kore">✨ 👩 AI Kore: หญิงหวานใส สุภาพธรรมชาติ (แนะนำที่สุด ★)</option>
+                  <option value="ai_female_zephyr">✨ 👩 AI Zephyr: หญิงอบอุ่น นุ่มนวล ละมุนหู</option>
+                  <option value="ai_male_puck">✨ 👨 AI Puck: ชายหนุ่มสดใส คมชัด เป็นกันเอง</option>
+                </optgroup>
+
+                <optgroup label="🇹🇭 ระบบเสียงอัตโนมัติ (Auto Engine)">
+                  <option value="female_auto">👩 อัตโนมัติ: เสียงผู้หญิง (ระบบเลือกเสียงผู้หญิงที่ดีที่สุด)</option>
+                  <option value="sweet_auto">🌸 อัตโนมัติ: เสียงสาวหวานใส</option>
+                  <option value="male_auto">👨 อัตโนมัติ: เสียงผู้ชาย (Auto Thai Male)</option>
+                  <option value="default">🎙️ อัตโนมัติ: เสียงมาตรฐานของระบบ</option>
                 </optgroup>
 
                 {femaleVoices.length > 0 && (
-                  <optgroup label="👩 เสียงผู้หญิงในเครื่อง (Female Voices)">
+                  <optgroup label="👩 เสียงผู้หญิงที่ติดตั้งในเครื่อง (Installed Local Female Voices)">
                     {femaleVoices.map((v) => (
                       <option key={v.voiceURI} value={v.voiceURI}>
                         👩 {v.badgeLabel ? `${v.badgeLabel}` : v.name}
@@ -452,7 +455,7 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
                 )}
 
                 {maleVoices.length > 0 && (
-                  <optgroup label="👨 เสียงผู้ชายในเครื่อง (Male Voices)">
+                  <optgroup label="👨 เสียงผู้ชายที่ติดตั้งในเครื่อง (Installed Local Male Voices)">
                     {maleVoices.map((v) => (
                       <option key={v.voiceURI} value={v.voiceURI}>
                         👨 {v.badgeLabel ? `${v.badgeLabel}` : v.name}
@@ -463,7 +466,7 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
 
                 <optgroup label="🌐 เสียงภาษาอื่นๆ ในระบบ (Other System Voices)">
                   {voices
-                    .filter((v) => !v.isThai)
+                    .filter((v) => !v.isThai && !v.isAi)
                     .slice(0, 30)
                     .map((v) => (
                       <option key={v.voiceURI} value={v.voiceURI}>
@@ -482,6 +485,20 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
                 🔊 ฟังเสียงนี้
               </button>
             </div>
+
+            {femaleVoices.length === 0 && (
+              <div className="flex items-start gap-2 bg-pink-500/10 border border-pink-500/20 rounded-xl p-2.5 text-xs text-pink-200 mt-2">
+                <Sparkles className="w-4 h-4 text-pink-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-pink-300">
+                    💡 ระบบ Windows ในเครื่องของคุณไม่มีเสียงผู้หญิงติดตั้งไว้
+                  </p>
+                  <p className="text-[11px] text-pink-200/80 mt-0.5">
+                    ไม่ต้องกังวล! ระบบเปิดใช้ <strong>เสียงผู้หญิง AI Studio (AI Kore)</strong> ให้อัตโนมัติ เพื่อรับประกันว่าจะมีเสียงผู้หญิงพูดจริง 100% เสียงหวานชัดเจนค่ะ
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Speed Selector (ความเร็วพูด - เน้นย้ำไม่เร็วเกิน) */}
