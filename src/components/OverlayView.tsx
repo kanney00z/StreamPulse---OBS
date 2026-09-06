@@ -14,6 +14,7 @@ import {
   FloatingHeartItem,
   ChatThemeId,
   SubathonThemeId,
+  SubathonFontId,
   SubathonTimeAddedEvent,
   IndoFinityConnectionStatus,
 } from '../types';
@@ -72,6 +73,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
 
   // Subathon URL Params
   const subathonThemeParam = (urlParams.get('subathontheme') || urlParams.get('theme') || 'cyberpunk-neon') as SubathonThemeId;
+  const subathonFontParam = (urlParams.get('subathonfont') || urlParams.get('font') || 'orbitron') as SubathonFontId;
   const subathonStyleParam = (urlParams.get('subathonstyle') as 'card' | 'frameless') || 'frameless';
   const subathonTitleParam = urlParams.get('subathontitle') || 'SUBATHON MARATHON';
   const subathonSecParam = Number(urlParams.get('subathonsec') || 7200);
@@ -131,6 +133,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
 
     // Subathon Timer
     subathonTheme: subathonThemeParam,
+    subathonFont: subathonFontParam,
     subathonStyle: subathonStyleParam,
     subathonTitle: subathonTitleParam,
     subathonAutoAdd: true,
@@ -470,6 +473,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
             maxCapSeconds={settings.subathonMaxCapHours * 3600}
             isRunning={subathonIsRunning}
             theme={settings.subathonTheme}
+            font={settings.subathonFont}
             style={settings.subathonStyle}
             title={settings.subathonTitle}
             addedEvents={subathonEvents}

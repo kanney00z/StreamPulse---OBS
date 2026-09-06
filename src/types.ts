@@ -4,7 +4,38 @@ export type SubathonThemeId =
   | 'kawaii-pastel'
   | 'retro-arcade'
   | 'midnight-minimal'
-  | 'magma-flame';
+  | 'magma-flame'
+  | '3d-cyber-holo'
+  | '3d-crystal-glass'
+  | '3d-gold-bullion'
+  | '3d-clay-bubble'
+  | '3d-mecha-titan'
+  | '3d-neon-capsule';
+
+export type SubathonFontId =
+  | 'orbitron'
+  | 'russo-one'
+  | 'bungee'
+  | 'black-ops'
+  | 'chakra-petch'
+  | 'press-start'
+  | 'righteous'
+  | 'fredoka'
+  | 'jetbrains-mono'
+  | 'outfit';
+
+export interface SubathonFontConfig {
+  id: SubathonFontId;
+  name: string;
+  nameTh: string;
+  badge: string;
+  category: 'cyber' | 'heavy' | 'retro' | 'bubble' | 'tech';
+  fontFamily: string;
+  fontClass: string;
+  letterSpacing?: string;
+  sampleDigits: string;
+  description: string;
+}
 
 export interface SubathonThemeConfig {
   id: SubathonThemeId;
@@ -18,6 +49,9 @@ export interface SubathonThemeConfig {
   labelClass: string;
   progressBarClass: string;
   iconName: string;
+  is3D?: boolean;
+  digitBlockClass?: string;
+  reflectionSheen?: boolean;
 }
 
 export interface SubathonTimeAddedEvent {
@@ -197,6 +231,7 @@ export interface OverlayCustomSettings {
 
   // Subathon Timer (โหมดจับเวลามาราธอน หลากหลายธีม)
   subathonTheme: SubathonThemeId;
+  subathonFont: SubathonFontId;
   subathonStyle: 'card' | 'frameless'; // 'frameless' = ไม่มีกรอบ (แค่เวลา + หลอดล่าง), 'card' = มีกรอบการ์ด
   subathonStartSeconds?: number; // เวลาเริ่มต้นที่กำหนดเอง (วินาที)
   subathonTitle: string;

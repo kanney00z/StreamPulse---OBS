@@ -813,7 +813,7 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
                 >
                   {SUBATHON_THEMES.map((th) => (
                     <option key={th.id} value={th.id}>
-                      {th.name} ({th.nameTh})
+                      {th.is3D ? '✨ 3D - ' : ''}{th.name} ({th.nameTh})
                     </option>
                   ))}
                 </select>
