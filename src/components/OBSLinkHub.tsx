@@ -61,7 +61,7 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
         params.set('ttspitch', settings.chatTtsPitch.toString());
         params.set('ttsvol', settings.chatTtsVolume.toString());
         params.set('ttssweet', settings.chatTtsSweetEnding ? '1' : '0');
-        if (settings.chatTtsVoice && settings.chatTtsVoice !== 'default') {
+        if (settings.chatTtsVoice) {
           params.set('ttsvoice', settings.chatTtsVoice);
         }
       }

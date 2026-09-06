@@ -53,11 +53,11 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
 
   // TTS URL Params
   const ttsParam = urlParams.get('tts') === '1';
-  const ttsFormatParam = (urlParams.get('ttsformat') as any) || 'sweet';
-  const ttsSpeedParam = Number(urlParams.get('ttsspeed') || 1.05);
-  const ttsPitchParam = Number(urlParams.get('ttspitch') || 1.22);
+  const ttsFormatParam = (urlParams.get('ttsformat') as any) || 'nameAndMessage';
+  const ttsSpeedParam = Number(urlParams.get('ttsspeed') || 0.86);
+  const ttsPitchParam = Number(urlParams.get('ttspitch') || 1.05);
   const ttsVolParam = Number(urlParams.get('ttsvol') || 90);
-  const ttsVoiceParam = urlParams.get('ttsvoice') || 'default';
+  const ttsVoiceParam = urlParams.get('ttsvoice') || 'ai_female_google';
   const ttsSweetParam = urlParams.get('ttssweet') !== '0';
 
   // Follow & Share URL Params

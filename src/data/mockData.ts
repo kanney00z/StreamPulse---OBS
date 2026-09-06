@@ -144,6 +144,127 @@ export const CHAT_THEMES: ChatThemeConfig[] = [
     textClass: 'text-neutral-100 text-sm font-normal',
     avatarShape: 'circle',
     accentBorder: 'border-rose-500/30',
+    category: 'modern',
+  },
+  {
+    id: '3d-glass-prism',
+    name: '3D Prism Glass',
+    tagline: 'กระจก 3D ปริซึมลอยตัว แสงสะท้อนมิติเหลี่ยมแก้วเงาแวววาว ล้ำยุคสมจริง',
+    badge: '3D PRISM 🔮',
+    is3D: true,
+    category: '3d',
+    previewBg: 'bg-gradient-to-br from-cyan-950/80 via-slate-900 to-purple-950/80 border-t border-t-cyan-300/60 border-b-2 border-b-purple-900 shadow-[0_8px_16px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.4)]',
+    containerClass: 'space-y-3 font-sans',
+    messageCardClass: (highlighted) =>
+      `px-4 py-3 rounded-2xl border-t border-t-cyan-300/60 border-b-[3px] border-b-purple-950 border-x border-x-white/20 backdrop-blur-xl transition-all duration-200 ${
+        highlighted
+          ? 'bg-gradient-to-r from-purple-900/90 via-slate-900/90 to-cyan-900/90 shadow-[0_12px_28px_-4px_rgba(6,182,212,0.4),0_0_20px_rgba(168,85,247,0.3),inset_0_2px_2px_rgba(255,255,255,0.6),inset_0_-2px_4px_rgba(0,0,0,0.7)] ring-1 ring-cyan-400/60'
+          : 'bg-slate-950/80 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.85),0_2px_8px_rgba(6,182,212,0.15),inset_0_1.5px_1px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.6)] hover:shadow-[0_14px_30px_-5px_rgba(0,0,0,0.9),inset_0_2px_2px_rgba(255,255,255,0.45)]'
+      }`,
+    usernameClass: 'font-bold tracking-wide text-cyan-200 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]',
+    textClass: 'text-slate-100 font-normal leading-relaxed drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]',
+    avatarShape: 'squircle',
+    accentBorder: 'border-l-4 border-l-cyan-400 shadow-[-4px_0_12px_rgba(34,211,238,0.4)]',
+  },
+  {
+    id: '3d-cyber-isometric',
+    name: '3D Cyber Isometric',
+    tagline: 'บล็อก 3 มิติหนานูน ลอยตัวมีขอบข้างมิติ ไอโซเมตริกเกมมิ่งสุดเท่',
+    badge: '3D BLOCK 🧊',
+    is3D: true,
+    category: '3d',
+    previewBg: 'bg-slate-900 border-t border-t-cyan-400 border-l border-l-cyan-500/60 border-r border-r-indigo-900 border-b-4 border-b-indigo-950 shadow-[0_6px_0_#0f172a]',
+    containerClass: 'space-y-3.5',
+    messageCardClass: (highlighted) =>
+      `px-4 py-2.5 rounded-xl border-t border-t-cyan-400/80 border-l-2 border-l-cyan-500/60 border-r-2 border-r-slate-900 border-b-[5px] transition-all duration-200 ${
+        highlighted
+          ? 'bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-b-cyan-600 shadow-[0_6px_0_#0e7490,0_16px_25px_rgba(6,182,212,0.35),inset_0_1px_0_rgba(255,255,255,0.3)]'
+          : 'bg-slate-950/90 border-b-indigo-950 shadow-[0_6px_0_#020617,0_12px_20px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.2)] hover:border-b-indigo-900'
+      }`,
+    usernameClass: 'font-black uppercase tracking-wider text-cyan-300 drop-shadow-[0_2px_0_#020617]',
+    textClass: 'text-neutral-100 font-medium leading-relaxed drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]',
+    avatarShape: 'rounded',
+    accentBorder: 'border-l-4 border-l-cyan-400',
+  },
+  {
+    id: '3d-tactile-clay',
+    name: '3D Claymorphism Soft',
+    tagline: 'ผิวนูนนุ่ม 3 มิติ เคลย์มอร์ฟิซึม แสงตกกระทบละมุน ฟีลจับต้องได้จริง',
+    badge: '3D CLAY 🫧',
+    is3D: true,
+    category: '3d',
+    previewBg: 'bg-slate-800/90 border border-white/20 shadow-[4px_4px_12px_rgba(0,0,0,0.5),inset_0_2px_4px_rgba(255,255,255,0.3)]',
+    containerClass: 'space-y-3',
+    messageCardClass: (highlighted) =>
+      `px-4 py-3 rounded-3xl border border-white/20 transition-all duration-200 ${
+        highlighted
+          ? 'bg-gradient-to-br from-purple-900/90 via-slate-800/90 to-purple-950/95 shadow-[6px_6px_20px_rgba(168,85,247,0.35),-3px_-3px_10px_rgba(255,255,255,0.15),inset_0_3px_6px_rgba(255,255,255,0.45),inset_0_-3px_6px_rgba(0,0,0,0.5)]'
+          : 'bg-gradient-to-br from-slate-800/90 via-slate-850 to-slate-900/95 shadow-[6px_6px_18px_rgba(0,0,0,0.65),-3px_-3px_10px_rgba(255,255,255,0.08),inset_0_2.5px_5px_rgba(255,255,255,0.3),inset_0_-3px_5px_rgba(0,0,0,0.45)]'
+      }`,
+    usernameClass: 'font-bold text-violet-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]',
+    textClass: 'text-slate-100 font-normal leading-relaxed',
+    avatarShape: 'circle',
+    accentBorder: 'border-l-4 border-l-violet-400',
+  },
+  {
+    id: '3d-floating-capsule',
+    name: '3D Floating Capsule',
+    tagline: 'แคปซูล 3 มิติทรงกระบอกโค้งมน แสงไฮไลท์นูนเงา ลอยตัวเหนือฉาก',
+    badge: '3D PILL 💊',
+    is3D: true,
+    category: '3d',
+    previewBg: 'bg-slate-900 rounded-full border-t border-t-white/40 border-b-2 border-b-black shadow-[0_8px_16px_rgba(0,0,0,0.7),inset_0_1px_2px_rgba(255,255,255,0.4)]',
+    containerClass: 'space-y-3',
+    messageCardClass: (highlighted) =>
+      `px-4 py-2.5 rounded-full border-t-2 border-t-white/45 border-b-[3px] border-b-black/90 border-x border-x-white/10 transition-all duration-200 ${
+        highlighted
+          ? 'bg-gradient-to-r from-rose-950 via-slate-900 to-pink-950 shadow-[0_12px_24px_-2px_rgba(244,63,94,0.35),0_4px_8px_rgba(0,0,0,0.6),inset_0_2px_4px_rgba(255,255,255,0.5),inset_0_-2px_4px_rgba(0,0,0,0.7)] ring-1 ring-rose-400/40'
+          : 'bg-gradient-to-b from-slate-800/95 via-slate-900/95 to-slate-950/95 shadow-[0_10px_20px_-3px_rgba(0,0,0,0.85),0_3px_6px_rgba(0,0,0,0.5),inset_0_2px_4px_rgba(255,255,255,0.35),inset_0_-2px_4px_rgba(0,0,0,0.6)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.9)]'
+      }`,
+    usernameClass: 'font-bold text-rose-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]',
+    textClass: 'text-neutral-100 font-normal text-sm leading-relaxed',
+    avatarShape: 'circle',
+    accentBorder: 'border-l-4 border-l-rose-400',
+  },
+  {
+    id: '3d-luxury-gold',
+    name: '3D Gold Metallic VIP',
+    tagline: 'ทองคำ 3 มิติสลักขอบนูน แสงเมทัลลิกประกายทอง หรูหราไฮเอนด์ระดับ VIP',
+    badge: '3D GOLD 👑',
+    is3D: true,
+    category: '3d',
+    previewBg: 'bg-neutral-950 border-t-2 border-t-amber-300/90 border-b-4 border-b-amber-900 border-x border-x-amber-600/50 shadow-[0_6px_0_#451a03]',
+    containerClass: 'space-y-3 font-sans',
+    messageCardClass: (highlighted) =>
+      `px-4 py-3 rounded-xl border-t-2 border-t-amber-300/90 border-b-[4px] border-x border-x-amber-600/50 transition-all duration-200 ${
+        highlighted
+          ? 'bg-gradient-to-b from-amber-950/90 via-neutral-950 to-amber-950/90 border-b-amber-500 shadow-[0_6px_0_#b45309,0_16px_30px_rgba(245,158,11,0.35),inset_0_2px_3px_rgba(254,240,138,0.7),inset_0_-2px_4px_rgba(0,0,0,0.8)] ring-1 ring-amber-400/50'
+          : 'bg-gradient-to-b from-neutral-950/95 via-neutral-900/90 to-neutral-950/95 border-b-amber-900/90 shadow-[0_6px_0_#451a03,0_12px_22px_rgba(0,0,0,0.85),inset_0_1.5px_2px_rgba(253,230,138,0.45),inset_0_-2px_4px_rgba(0,0,0,0.75)]'
+      }`,
+    usernameClass: 'font-black tracking-wide bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 bg-clip-text text-transparent drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]',
+    textClass: 'text-amber-50/90 font-normal leading-relaxed drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]',
+    avatarShape: 'squircle',
+    accentBorder: 'border-l-4 border-l-amber-400 shadow-[-3px_0_8px_rgba(251,191,36,0.5)]',
+  },
+  {
+    id: '3d-gaming-crystal',
+    name: '3D Crystal Emerald',
+    tagline: 'ผลึกแก้วคริสตัลมรกต 3 มิติ เหลี่ยมมุมเฉียบคม เรืองแสงนีออนมรกตสะกดสายตา',
+    badge: '3D GEM 💎',
+    is3D: true,
+    category: '3d',
+    previewBg: 'bg-emerald-950/90 border-t-2 border-t-emerald-300 border-b-4 border-b-emerald-950 border-x border-x-emerald-500/40 shadow-[0_8px_16px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(167,243,208,0.4)]',
+    containerClass: 'space-y-3 font-sans',
+    messageCardClass: (highlighted) =>
+      `px-4 py-2.5 rounded-2xl border-t-2 border-t-emerald-300/80 border-b-[4px] border-l-2 border-l-emerald-400/50 border-r border-r-teal-900/80 transition-all duration-200 ${
+        highlighted
+          ? 'bg-gradient-to-br from-emerald-950/90 via-slate-950/95 to-teal-950/90 border-b-emerald-600 shadow-[0_8px_0_#065f46,0_16px_30px_rgba(16,185,129,0.4),0_0_25px_rgba(52,211,153,0.35),inset_0_2px_3px_rgba(255,255,255,0.6),inset_0_-2px_4px_rgba(0,0,0,0.7)]'
+          : 'bg-gradient-to-br from-slate-950/95 via-emerald-950/80 to-slate-950/95 border-b-emerald-950 shadow-[0_6px_0_#022c22,0_12px_22px_rgba(0,0,0,0.85),0_0_15px_rgba(16,185,129,0.2),inset_0_1.5px_2px_rgba(167,243,208,0.4),inset_0_-2px_4px_rgba(0,0,0,0.75)]'
+      }`,
+    usernameClass: 'font-bold text-emerald-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]',
+    textClass: 'text-emerald-50 font-normal leading-relaxed drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]',
+    avatarShape: 'squircle',
+    accentBorder: 'border-l-4 border-l-emerald-400 shadow-[-3px_0_10px_rgba(52,211,153,0.5)]',
   },
 ];
 

@@ -98,7 +98,7 @@ export default function App() {
     chatTtsSpeed: 0.86, // จังหวะปกติ ไม่เร็วเกิน ชัดเจน ฟังสบาย เป็นธรรมชาติ
     chatTtsPitch: 1.05, // โทนเสียงพูดผู้หญิงธรรมชาติ ฟังสบาย
     chatTtsVolume: 90,
-    chatTtsVoice: 'ai_female_kore',
+    chatTtsVoice: 'ai_female_google', // เสียงสาวหวานใส AI รับประกันหญิง 100%
     chatTtsTonePreset: 'female-natural',
     chatTtsSkipSpam: true,
     chatTtsSweetEnding: false,
@@ -966,9 +966,10 @@ export default function App() {
                       <span>ธีมกล่องแชท (Chat Theme):</span>
                       <button
                         onClick={() => setActiveTab('themes')}
-                        className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium cursor-pointer"
+                        className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium cursor-pointer flex items-center gap-1"
                       >
-                        ดูตัวอย่าง 8 ธีม &rarr;
+                        <span>ดูแกลเลอรี {CHAT_THEMES.length} ธีม (มี 3D)</span>
+                        <span>&rarr;</span>
                       </button>
                     </label>
                     <select
@@ -976,11 +977,20 @@ export default function App() {
                       onChange={(e) => updateSettings({ chatTheme: e.target.value as any })}
                       className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
                     >
-                      {CHAT_THEMES.map((theme) => (
-                        <option key={theme.id} value={theme.id}>
-                          {theme.name} ({theme.badge})
-                        </option>
-                      ))}
+                      <optgroup label="✨ ธีม 3 มิตินูนลอย (3D Themes NEW)">
+                        {CHAT_THEMES.filter((t) => t.is3D).map((theme) => (
+                          <option key={theme.id} value={theme.id}>
+                            ✨ {theme.name} ({theme.badge})
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="🎨 ธีมคลาสสิก & โมเดิร์น (Classic & Modern)">
+                        {CHAT_THEMES.filter((t) => !t.is3D).map((theme) => (
+                          <option key={theme.id} value={theme.id}>
+                            {theme.name} ({theme.badge})
+                          </option>
+                        ))}
+                      </optgroup>
                     </select>
                   </div>
 

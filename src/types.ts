@@ -36,7 +36,13 @@ export type ChatThemeId =
   | 'comic-pop'
   | 'aurora-gradient'
   | 'retro-arcade'
-  | 'tiktok-bubble';
+  | 'tiktok-bubble'
+  | '3d-glass-prism'
+  | '3d-cyber-isometric'
+  | '3d-tactile-clay'
+  | '3d-floating-capsule'
+  | '3d-luxury-gold'
+  | '3d-gaming-crystal';
 
 export interface ChatBadge {
   type: 'mod' | 'vip' | 'sub' | 'top_fan' | 'verified';
@@ -69,6 +75,8 @@ export interface ChatThemeConfig {
   textClass: string;
   avatarShape: 'circle' | 'rounded' | 'squircle' | 'hex';
   accentBorder: string;
+  is3D?: boolean;
+  category?: '3d' | 'modern' | 'gaming' | 'cute';
 }
 
 export interface LikeUser {

@@ -139,10 +139,15 @@ export const ChatOverlayWidget: React.FC<ChatOverlayWidgetProps> = ({
             <motion.div
               key={msg.id}
               layout
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
+              initial={
+                activeTheme.is3D
+                  ? { opacity: 0, y: 24, rotateX: -12, scale: 0.94 }
+                  : { opacity: 0, y: 20, scale: 0.95 }
+              }
+              animate={{ opacity: 1, y: 0, rotateX: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.25 } }}
               transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+              style={activeTheme.is3D ? { transformPerspective: 900 } : undefined}
               className={`${activeTheme.messageCardClass(msg.highlighted)} ${activeTheme.accentBorder}`}
             >
               <div className="flex items-start gap-2.5">
@@ -152,9 +157,11 @@ export const ChatOverlayWidget: React.FC<ChatOverlayWidgetProps> = ({
                       src={msg.avatarUrl}
                       alt={msg.username}
                       referrerPolicy="no-referrer"
-                      className={`w-8 h-8 object-cover border border-white/20 shadow-sm ${getAvatarRadius(
-                        activeTheme.avatarShape
-                      )}`}
+                      className={`w-8 h-8 object-cover ${
+                        activeTheme.is3D
+                          ? 'border-2 border-white/40 shadow-[0_4px_8px_rgba(0,0,0,0.6)]'
+                          : 'border border-white/20 shadow-sm'
+                      } ${getAvatarRadius(activeTheme.avatarShape)}`}
                     />
                     {msg.badges?.includes('top_fan') && (
                       <span className="absolute -bottom-1 -right-1 text-xs">🔥</span>

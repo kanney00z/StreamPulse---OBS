@@ -37,13 +37,13 @@ const TONE_PRESETS: TonePreset[] = [
   {
     id: 'female-natural',
     name: 'เสียงผู้หญิงธรรมชาติ',
-    desc: 'เสียงผู้หญิงสุภาพ ฟังสบาย ชัดถ้อยชัดคำ (รับประกันมีเสียงผู้หญิง 100%)',
+    desc: 'เสียงสาวหวานใส ชัดเจน ฟังสบาย (รับประกันเสียงผู้หญิง AI 100%)',
     icon: '👩',
     pitch: 1.05,
     speed: 0.86,
     format: 'nameAndMessage',
     sweetEnding: false,
-    voiceURI: 'ai_female_kore',
+    voiceURI: 'ai_female_google',
     badge: '★ แนะนำ',
   },
   {
@@ -55,7 +55,7 @@ const TONE_PRESETS: TonePreset[] = [
     speed: 0.88,
     format: 'sweet',
     sweetEnding: true,
-    voiceURI: 'ai_female_kore',
+    voiceURI: 'ai_female_google',
     badge: 'ยอดนิยม',
   },
   {
@@ -91,7 +91,7 @@ const TONE_PRESETS: TonePreset[] = [
     speed: 0.78,
     format: 'nameAndMessage',
     sweetEnding: false,
-    voiceURI: 'ai_female_kore',
+    voiceURI: 'ai_female_google',
     badge: '0.78x',
   },
   {
@@ -103,7 +103,7 @@ const TONE_PRESETS: TonePreset[] = [
     speed: 0.90,
     format: 'sweet',
     sweetEnding: true,
-    voiceURI: 'ai_female_kore',
+    voiceURI: 'ai_female_google',
   },
 ];
 
@@ -284,13 +284,13 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
                 type="button"
                 onClick={() => {
                   onUpdateSettings({
-                    chatTtsVoice: 'female_auto',
+                    chatTtsVoice: 'ai_female_google',
                     chatTtsTonePreset: 'female-natural',
                     chatTtsPitch: 1.05,
                     chatTtsSpeed: 0.86,
                   });
                   ttsService.updateOptions({
-                    voiceURI: 'female_auto',
+                    voiceURI: 'ai_female_google',
                     pitch: 1.05,
                     rate: 0.86,
                   });
@@ -299,6 +299,9 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
                   ttsService.testSpeak(phrase);
                 }}
                 className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  settings.chatTtsVoice === 'ai_female_google' ||
+                  settings.chatTtsVoice === 'ai_female_kore' ||
+                  settings.chatTtsVoice === 'ai_female_zephyr' ||
                   settings.chatTtsVoice === 'female_auto' ||
                   settings.chatTtsVoice === 'sweet_auto' ||
                   settings.chatTtsTonePreset === 'female-natural' ||
@@ -310,8 +313,8 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
               >
                 <span className="text-base">👩</span>
                 <div className="text-left">
-                  <span className="block leading-tight">เสียงผู้หญิง (แนะนำ)</span>
-                  <span className="text-[10px] text-pink-300 font-normal">ธรรมชาติ ฟังสบาย</span>
+                  <span className="block leading-tight">เสียงผู้หญิง AI (แนะนำ)</span>
+                  <span className="text-[10px] text-pink-300 font-normal">หวานใส ฟังสบาย หญิง 100%</span>
                 </div>
               </button>
 
@@ -319,13 +322,13 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
                 type="button"
                 onClick={() => {
                   onUpdateSettings({
-                    chatTtsVoice: 'male_auto',
+                    chatTtsVoice: 'ai_male_puck',
                     chatTtsTonePreset: 'male',
                     chatTtsPitch: 0.95,
                     chatTtsSpeed: 0.86,
                   });
                   ttsService.updateOptions({
-                    voiceURI: 'male_auto',
+                    voiceURI: 'ai_male_puck',
                     pitch: 0.95,
                     rate: 0.86,
                   });
@@ -334,14 +337,16 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
                   ttsService.testSpeak(phrase);
                 }}
                 className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  settings.chatTtsVoice === 'male_auto' || settings.chatTtsTonePreset === 'male'
+                  settings.chatTtsVoice === 'ai_male_puck' ||
+                  settings.chatTtsVoice === 'male_auto' ||
+                  settings.chatTtsTonePreset === 'male'
                     ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/25 border border-cyan-400 text-cyan-200 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
                     : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
                 }`}
               >
                 <span className="text-base">👨</span>
                 <div className="text-left">
-                  <span className="block leading-tight">เสียงผู้ชาย</span>
+                  <span className="block leading-tight">เสียงผู้ชาย AI</span>
                   <span className="text-[10px] text-cyan-300 font-normal">หนุ่มสุภาพ คมชัด</span>
                 </div>
               </button>
@@ -432,8 +437,9 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
                 className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-400"
               >
                 <optgroup label="✨ เสียง AI สตูดิโอ (มีเสียงผู้หญิงแท้ 100% ทุกระบบ)">
-                  <option value="ai_female_kore">✨ 👩 AI Kore: หญิงหวานใส สุภาพธรรมชาติ (แนะนำที่สุด ★)</option>
-                  <option value="ai_female_zephyr">✨ 👩 AI Zephyr: หญิงอบอุ่น นุ่มนวล ละมุนหู</option>
+                  <option value="ai_female_google">✨ 👩 AI Google Thai: หญิงหวานใส ยอดนิยม TikTok & ไลฟ์ (แนะนำที่สุด ★)</option>
+                  <option value="ai_female_kore">✨ 👩 AI Kore: หญิงหวานละมุน พรีเมียม (โดย Gemini)</option>
+                  <option value="ai_female_zephyr">✨ 👩 AI Zephyr: หญิงอบอุ่น นุ่มนวล ละมุนหู (โดย Gemini)</option>
                   <option value="ai_male_puck">✨ 👨 AI Puck: ชายหนุ่มสดใส คมชัด เป็นกันเอง</option>
                 </optgroup>
 

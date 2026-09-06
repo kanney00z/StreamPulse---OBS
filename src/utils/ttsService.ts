@@ -61,7 +61,7 @@ class TTSEngine {
     rate: 0.86, // จังหวะพูดปกติ ไม่เร็วเกิน ฟังสบาย ชัดถ้อยชัดคำ
     pitch: 1.05, // โทนเสียงพูดผู้หญิงปกติธรรมชาติ
     volume: 90,
-    voiceURI: 'ai_female_kore', // แนะนำเริ่มต้นเป็นเสียงผู้หญิง AI สตูดิโอ รับประกันมีเสียงผู้หญิงแน่นอน
+    voiceURI: 'ai_female_google', // แนะนำเริ่มต้นเป็นเสียงผู้หญิง AI หวานใส รับประกันเสียงผู้หญิง 100%
     genderPreference: 'female',
     skipCommands: true,
     cleanSpam: true,
@@ -132,19 +132,31 @@ class TTSEngine {
 
     const aiVoices: TTSVoiceOption[] = [
       {
-        name: 'AI Kore (หญิงหวานใส เป็นธรรมชาติ แนะนำที่สุด)',
+        name: 'AI Google สาวหวานใส (ยอดนิยมอันดับ 1 ใน TikTok & ไลฟ์สตรีม ★ รับประกันหญิง 100%)',
         lang: 'th-TH',
-        voiceURI: 'ai_female_kore',
+        voiceURI: 'ai_female_google',
         isThai: true,
         isMale: false,
         isSweetRecommended: true,
         isDefault: true,
         gender: 'female',
-        badgeLabel: '✨ 👩 AI Studio Female (หวานใส นุ่มนวล รับประกันมีเสียงผู้หญิง 100%)',
+        badgeLabel: '✨ 👩 AI Google Thai Female (หวานใส เป็นธรรมชาติ รับประกันเสียงผู้หญิง 100%)',
         isAi: true,
       },
       {
-        name: 'AI Zephyr (หญิงอบอุ่น สุภาพ นุ่มนวล)',
+        name: 'AI Kore (หญิงหวานสุภาพ พรีเมียม โดย Gemini)',
+        lang: 'th-TH',
+        voiceURI: 'ai_female_kore',
+        isThai: true,
+        isMale: false,
+        isSweetRecommended: true,
+        isDefault: false,
+        gender: 'female',
+        badgeLabel: '✨ 👩 AI Studio Kore (หวานใส ละมุนพรีเมียม)',
+        isAi: true,
+      },
+      {
+        name: 'AI Zephyr (หญิงอบอุ่น สุภาพ นุ่มนวล โดย Gemini)',
         lang: 'th-TH',
         voiceURI: 'ai_female_zephyr',
         isThai: true,
@@ -152,7 +164,7 @@ class TTSEngine {
         isSweetRecommended: false,
         isDefault: false,
         gender: 'female',
-        badgeLabel: '✨ 👩 AI Studio Female (อบอุ่น ละมุน ชัดเจน)',
+        badgeLabel: '✨ 👩 AI Studio Zephyr (อบอุ่น ละมุน ชัดเจน)',
         isAi: true,
       },
       {
@@ -337,31 +349,39 @@ class TTSEngine {
     const nextText = this.queue.shift();
     if (!nextText) return;
 
-    const voiceUri = this.options.voiceURI || 'ai_female_kore';
+    const voiceUri = this.options.voiceURI || 'ai_female_google';
 
-    // Determine if we should use AI Studio TTS:
-    // 1. User selected an AI voice (ai_female_kore, ai_female_zephyr, ai_male_puck)
-    // 2. OR user selected a Female voice (female_auto, sweet_auto, default), but local system has NO Thai female voice (e.g. Windows only has Niwat)!
-    const isExplicitAi = voiceUri.startsWith('ai_');
-    const isWantsFemale =
-      voiceUri === 'female_auto' ||
-      voiceUri === 'sweet_auto' ||
-      voiceUri === 'default' ||
-      voiceUri.startsWith('ai_female');
+    // Prioritize Cloud AI TTS:
+    // Any AI voice (ai_female_google, ai_female_kore, ai_female_zephyr, ai_male_puck)
+    // OR female_auto / sweet_auto / default / male_auto
+    // Cloud AI is always preferred because local browser voices vary drastically by OS
+    // (e.g. Windows only bundles Niwat male voice by default).
+    const isExplicitLocalVoice =
+      !voiceUri.startsWith('ai_') &&
+      voiceUri !== 'female_auto' &&
+      voiceUri !== 'sweet_auto' &&
+      voiceUri !== 'male_auto' &&
+      voiceUri !== 'default';
 
-    const shouldTryAi =
-      isExplicitAi ||
-      (isWantsFemale && !this.hasLocalFemaleVoice);
+    const shouldTryAi = !isExplicitLocalVoice || voiceUri.startsWith('ai_');
 
     if (shouldTryAi) {
-      const aiGender = voiceUri.includes('male') && !voiceUri.includes('female') ? 'male' : 'female';
-      const aiVoiceName = voiceUri === 'ai_female_zephyr' ? 'Zephyr' : aiGender === 'male' ? 'Puck' : 'Kore';
+      const isMale = voiceUri.includes('male') && !voiceUri.includes('female');
+      const aiGender: 'female' | 'male' = isMale ? 'male' : 'female';
+      const aiVoiceName =
+        voiceUri === 'ai_female_kore'
+          ? 'ai_female_kore'
+          : voiceUri === 'ai_female_zephyr'
+          ? 'ai_female_zephyr'
+          : isMale
+          ? 'ai_male_puck'
+          : 'ai_female_google';
 
       const success = await this.speakWithAi(nextText, aiVoiceName, aiGender);
       if (success) {
         return;
       }
-      // If AI TTS fails or is unavailable, fallback to browser speech synthesis
+      // If AI TTS fails or is unavailable (e.g. offline), fallback to browser speech synthesis
     }
 
     // Browser Web Speech API fallback
