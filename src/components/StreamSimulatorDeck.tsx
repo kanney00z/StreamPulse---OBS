@@ -22,7 +22,7 @@ interface StreamSimulatorDeckProps {
   onAddLikes: (count: number) => void;
   onResetLikes?: () => void;
   totalLikes?: number;
-  onSendChat: (customText?: string) => void;
+  onSendChat: (customText?: string, rolePreset?: 'queen' | 'mod' | 'vip' | 'sub' | 'coder' | 'memer' | 'event') => void;
   onSendGift: (gift: GiftItem, combo?: number) => void;
   onSendFollow?: (username?: string) => void;
   onSendShare?: (username?: string) => void;
@@ -271,6 +271,47 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
                   🌸 ฟังเสียงหวานใส
                 </button>
               )}
+            </div>
+
+            {/* Quick Twitch Role & Event Tester (ตามคลิป) */}
+            <div className="pt-1.5 border-t border-white/10 space-y-1">
+              <span className="text-[10px] text-purple-300/80 font-bold uppercase tracking-wider block">
+                ทดสอบ Role & Event ตามคลิป:
+              </span>
+              <div className="grid grid-cols-4 gap-1">
+                <button
+                  type="button"
+                  onClick={() => onSendChat(undefined, 'queen')}
+                  className="py-1 px-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-[10px] font-bold text-center transition-all active:scale-95 cursor-pointer"
+                  title="แชทบทบาท QUEEN พร้อมมงกุฎเรืองแสง"
+                >
+                  👑 Queen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSendChat(undefined, 'mod')}
+                  className="py-1 px-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold text-center transition-all active:scale-95 cursor-pointer"
+                  title="แชทบทบาท MOD พร้อมโล่เขียว"
+                >
+                  🛡️ Mod
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSendChat(undefined, 'vip')}
+                  className="py-1 px-1 rounded-lg bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 text-[10px] font-bold text-center transition-all active:scale-95 cursor-pointer"
+                  title="แชทบทบาท VIP พร้อมเพชรชมพู"
+                >
+                  💎 VIP
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSendChat(undefined, 'event')}
+                  className="py-1 px-1 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-[10px] font-bold text-center transition-all active:scale-95 cursor-pointer shadow-sm"
+                  title="Event Pill (Resub / Redeem / Bits)"
+                >
+                  💧 Event
+                </button>
+              </div>
             </div>
           </div>
         </div>

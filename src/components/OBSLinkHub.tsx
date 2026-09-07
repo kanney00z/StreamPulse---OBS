@@ -54,6 +54,12 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
       params.set('autohide', settings.chatAutoHideSeconds.toString());
       params.set('fontsize', settings.chatFontSize);
       params.set('avatars', settings.chatShowAvatars ? '1' : '0');
+      if (settings.chatLayout) {
+        params.set('layout', settings.chatLayout);
+      }
+      if (settings.chatShowTimestamps !== undefined) {
+        params.set('timestamp', settings.chatShowTimestamps ? '1' : '0');
+      }
       if (settings.chatTtsEnabled) {
         params.set('tts', '1');
         params.set('ttsformat', settings.chatTtsFormat);
@@ -363,9 +369,25 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5">
+                <span>เลย์เอาต์:</span>
+                <select
+                  value={settings.chatLayout || 'vertical'}
+                  onChange={(e) =>
+                    onUpdateSettings({
+                      chatLayout: e.target.value as 'vertical' | 'horizontal',
+                    })
+                  }
+                  className="bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-400"
+                >
+                  <option value="vertical">แนวตั้ง (Vertical Stack)</option>
+                  <option value="horizontal">แนวนอน (Horizontal Ticker ตามคลิป)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5">
                 <span>ขนาดแนะนำ:</span>
                 <span className="font-mono text-[11px] text-cyan-300 bg-cyan-400/10 px-2 py-0.5 rounded border border-cyan-400/20">
-                  420 × 650 px
+                  {settings.chatLayout === 'horizontal' ? '1280 × 140 px' : '420 × 650 px'}
                 </span>
               </div>
 

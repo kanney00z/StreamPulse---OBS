@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { SubathonThemeId, SubathonTimeAddedEvent, SubathonFontId } from '../types';
 import { SUBATHON_THEMES, SUBATHON_FONTS } from '../data/mockData';
+import { ViperSubathonCard } from './ViperSubathonCard';
 
 interface SubathonTimerWidgetProps {
   seconds: number;
@@ -28,7 +29,7 @@ interface SubathonTimerWidgetProps {
   isRunning: boolean;
   theme?: SubathonThemeId;
   font?: SubathonFontId;
-  style?: 'card' | 'frameless';
+  style?: 'card' | 'frameless' | 'viperuex';
   title?: string;
   addedEvents?: SubathonTimeAddedEvent[];
   showProgressBar?: boolean;
@@ -149,8 +150,21 @@ export const SubathonTimerWidget: React.FC<SubathonTimerWidgetProps> = ({
         </AnimatePresence>
       </div>
 
-      {/* Main Subathon Widget: Either Frameless (Just time + bottom bar) or Card (Full Box) */}
-      {style === 'frameless' ? (
+      {/* Main Subathon Widget: Either Viperuex (Video Stream Widget) OR Frameless OR Standard Card */}
+      {(style === 'viperuex' || (currentTheme.isViper && style !== 'frameless')) ? (
+        <ViperSubathonCard
+          seconds={seconds}
+          initialSeconds={initialSeconds}
+          maxCapSeconds={maxCapSeconds}
+          isRunning={isRunning}
+          themeConfig={currentTheme}
+          fontConfig={currentFont}
+          title={title}
+          progressPercent={progressPercent}
+          isLowTime={isLowTime}
+          isTimeUp={isTimeUp}
+        />
+      ) : style === 'frameless' ? (
         <div
           className={`relative flex flex-col items-center justify-center p-2 sm:p-3 select-none transition-all duration-300 ${
             isLowTime ? 'animate-pulse' : ''

@@ -61,6 +61,7 @@ import { ThemeSelector } from './components/ThemeSelector';
 import { OverlayView } from './components/OverlayView';
 import { IndoFinityBridgeView } from './components/IndoFinityBridgeView';
 import { ChatTtsControlCard } from './components/ChatTtsControlCard';
+import { WidgetCustomizerPanel } from './components/WidgetCustomizerPanel';
 import { getIndoFinityClient, IndoFinityClient } from './services/indofinityService';
 import { sounds } from './utils/soundEffects';
 import { ttsService } from './utils/ttsService';
@@ -83,11 +84,13 @@ export default function App() {
 
   // Global Overlay Settings State
   const [settings, setSettings] = useState<OverlayCustomSettings>({
-    chatTheme: 'cyberpunk-neon',
+    chatTheme: 'twitch-glow-dynamic',
     chatFontSize: 'base',
     chatAutoHideSeconds: 10,
     chatShowAvatars: true,
     chatShowBadges: true,
+    chatShowTimestamps: true,
+    chatLayout: 'vertical',
     chatDirection: 'down',
     chatSoundEnabled: true,
     chatMaxMessages: 12,
@@ -135,10 +138,10 @@ export default function App() {
     streamShareCount: 0,
 
     // Subathon Timer Settings
-    subathonTheme: 'cyberpunk-neon',
+    subathonTheme: 'viper-cyber-pink',
     subathonFont: 'orbitron',
-    subathonStyle: 'frameless', // เริ่มต้นด้วยสไตล์คลีนไม่มีกรอบ (แค่เวลา + หลอดล่าง) ตามที่ต้องการ และสลับได้
-    subathonTitle: 'สตรีมมาราธอน 24 ชม.',
+    subathonStyle: 'viperuex', // สไตล์ตามคลิปวีดีโอ (หน้าปัดเข็ม เกียร์หมุน หลอดไฟ LED)
+    subathonTitle: 'STARTING SOON',
     subathonAutoAdd: true,
     subathonAddPerFollow: 30,
     subathonAddPerShare: 15,
@@ -322,18 +325,55 @@ export default function App() {
   };
 
   // Action: Send Chat
-  const handleSendChat = (customText?: string) => {
+  const handleSendChat = (customText?: string, rolePreset?: 'queen' | 'mod' | 'vip' | 'sub' | 'coder' | 'memer' | 'event') => {
     sounds.playChat();
+
+    if (rolePreset === 'event') {
+      const eventTypes: ('resub' | 'redeem' | 'cheer' | 'follow')[] = ['resub', 'redeem', 'cheer', 'follow'];
+      const chosenEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+      const randomUser = SIMULATION_NAMES[Math.floor(Math.random() * SIMULATION_NAMES.length)];
+      
+      let eventText = `✨ ${randomUser.name} สับตะไคร้ต่อเนื่อง 6 เดือน! (Resub x6)`;
+      if (chosenEvent === 'redeem') {
+        eventText = `💧 ${randomUser.name} แลกรางวัล Channel Points: ดื่มน้ำนะคนเก่ง`;
+      } else if (chosenEvent === 'cheer') {
+        eventText = `💎 ${randomUser.name} ส่ง 500 Bits! "สตรีมสนุกมากครับ"`;
+      } else if (chosenEvent === 'follow') {
+        eventText = `⭐ ${randomUser.name} กดติดตามช่องแล้ว ยินดีต้อนรับ!`;
+      }
+
+      const eventMsg: ChatMessage = {
+        id: 'event-' + Date.now() + Math.random(),
+        username: randomUser.name,
+        avatarUrl: randomUser.avatar,
+        message: eventText,
+        timestamp: Date.now(),
+        color: '#10b981',
+        isEvent: true,
+        eventType: chosenEvent,
+        eventText,
+      };
+
+      setMessages((prev) => [...prev, eventMsg]);
+      return;
+    }
+
     const randomUser = SIMULATION_NAMES[Math.floor(Math.random() * SIMULATION_NAMES.length)];
     const text = customText || RANDOM_CHAT_PHRASES[Math.floor(Math.random() * RANDOM_CHAT_PHRASES.length)];
-    const possibleBadges: ('mod' | 'vip' | 'sub' | 'top_fan' | 'verified')[][] = [
-      ['vip'],
-      ['sub'],
-      ['mod', 'sub'],
-      ['top_fan'],
-      [],
+    
+    // Choose role & icons matching reference video
+    const roles: { roleType: 'streamer' | 'mod' | 'vip' | 'sub' | 'coder' | 'memer' | 'viewer'; roleTag: string; rightIcon: string; badge: 'mod' | 'vip' | 'sub' | 'top_fan' | 'verified' }[] = [
+      { roleType: 'streamer', roleTag: 'QUEEN', rightIcon: 'crown', badge: 'verified' },
+      { roleType: 'mod', roleTag: 'MOD', rightIcon: 'shield', badge: 'mod' },
+      { roleType: 'vip', roleTag: 'VIP', rightIcon: 'diamond', badge: 'vip' },
+      { roleType: 'sub', roleTag: 'SUB', rightIcon: 'star', badge: 'sub' },
+      { roleType: 'coder', roleTag: 'CODER', rightIcon: 'flower', badge: 'vip' },
+      { roleType: 'memer', roleTag: 'MEMER', rightIcon: 'pepe', badge: 'top_fan' },
     ];
-    const badges = possibleBadges[Math.floor(Math.random() * possibleBadges.length)];
+
+    const chosenRole = rolePreset
+      ? roles.find((r) => r.roleType === (rolePreset === 'queen' ? 'streamer' : rolePreset)) || roles[0]
+      : roles[Math.floor(Math.random() * roles.length)];
 
     const newMsg: ChatMessage = {
       id: 'chat-' + Date.now() + Math.random(),
@@ -343,9 +383,12 @@ export default function App() {
         : randomUser.avatar,
       message: text,
       timestamp: Date.now(),
-      badges: customText ? ['mod', 'verified'] : badges,
+      badges: [chosenRole.badge],
+      roleType: chosenRole.roleType,
+      roleTag: chosenRole.roleTag,
+      rightIcon: chosenRole.rightIcon as any,
       color: ['#38bdf8', '#f472b6', '#34d399', '#fbbf24', '#c084fc'][Math.floor(Math.random() * 5)],
-      highlighted: Math.random() > 0.75,
+      highlighted: Math.random() > 0.8,
     };
 
     setMessages((prev) => [...prev, newMsg]);
@@ -926,7 +969,9 @@ export default function App() {
                     {activeWidgetView !== 'subathon' && (activeWidgetView === 'all' || activeWidgetView === 'chat') && (
                       <div
                         className={`pointer-events-auto transition-all duration-200 ${
-                          activeWidgetView === 'chat'
+                          settings.chatLayout === 'horizontal'
+                            ? 'w-full h-24 sm:h-28 overflow-hidden'
+                            : activeWidgetView === 'chat'
                             ? 'w-full max-w-md mx-auto h-[480px]'
                             : 'w-72 sm:w-84 h-72 sm:h-80'
                         }`}
@@ -949,209 +994,24 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Right Settings & Quick OBS Link Inspector Column */}
+              {/* Right Settings & Categorized Widget Customizer Column */}
               <div className="lg:col-span-4 space-y-4">
-                {/* Active Theme Badge & Customizer */}
-                <div className="bg-slate-900/80 border border-white/10 rounded-3xl p-5 shadow-xl space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Sliders className="w-4 h-4 text-cyan-400" />
-                      ปรับแต่งวิดเจ็ตปัจจุบัน
-                    </h3>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
-                      LIVE SYNC
-                    </span>
-                  </div>
-
-                  {/* Chat Theme Quick Select */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-                      <span>ธีมกล่องแชท (Chat Theme):</span>
-                      <button
-                        onClick={() => setActiveTab('themes')}
-                        className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium cursor-pointer flex items-center gap-1"
-                      >
-                        <span>ดูแกลเลอรี {CHAT_THEMES.length} ธีม (มี 3D)</span>
-                        <span>&rarr;</span>
-                      </button>
-                    </label>
-                    <select
-                      value={settings.chatTheme}
-                      onChange={(e) => updateSettings({ chatTheme: e.target.value as any })}
-                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
-                    >
-                      <optgroup label="✨ ธีม 3 มิตินูนลอย (3D Themes NEW)">
-                        {CHAT_THEMES.filter((t) => t.is3D).map((theme) => (
-                          <option key={theme.id} value={theme.id}>
-                            ✨ {theme.name} ({theme.badge})
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="🎨 ธีมคลาสสิก & โมเดิร์น (Classic & Modern)">
-                        {CHAT_THEMES.filter((t) => !t.is3D).map((theme) => (
-                          <option key={theme.id} value={theme.id}>
-                            {theme.name} ({theme.badge})
-                          </option>
-                        ))}
-                      </optgroup>
-                    </select>
-                  </div>
-
-                  {/* Chat Font Size & Auto-Hide */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <label className="text-slate-400 mb-1 block">ขนาดฟอนต์แชท:</label>
-                      <select
-                        value={settings.chatFontSize}
-                        onChange={(e) => updateSettings({ chatFontSize: e.target.value as any })}
-                        className="w-full bg-slate-950 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-400"
-                      >
-                        <option value="sm">เล็ก (Small)</option>
-                        <option value="base">กลาง (Medium)</option>
-                        <option value="lg">ใหญ่ (Large)</option>
-                        <option value="xl">ใหญ่พิเศษ (XL)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-slate-400 mb-1 block">เวลาซ่อนข้อความ:</label>
-                      <select
-                        value={settings.chatAutoHideSeconds}
-                        onChange={(e) => updateSettings({ chatAutoHideSeconds: Number(e.target.value) })}
-                        className="w-full bg-slate-950 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-400"
-                      >
-                        <option value={0}>แสดงตลอดเวลา</option>
-                        <option value={5}>5 วินาที</option>
-                        <option value={10}>10 วินาที</option>
-                        <option value={15}>15 วินาที</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Like Goal Target */}
-                  <div className="space-y-2 pt-2 border-t border-white/10">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-300">เป้าหมายยอดไลก์:</span>
-                      <span className="font-mono font-bold text-pink-400">
-                        {settings.likeGoal.toLocaleString()} ไลก์
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min="5000"
-                      max="100000"
-                      step="5000"
-                      value={settings.likeGoal}
-                      onChange={(e) => updateSettings({ likeGoal: Number(e.target.value) })}
-                      className="w-full accent-pink-500 cursor-pointer"
-                    />
-
-                    {/* Like Status & Reset to 0 Button */}
-                    <div className="flex items-center justify-between gap-2 pt-0.5">
-                      <div className="text-[11px] text-slate-400">
-                        ยอดปัจจุบัน: <strong className="text-pink-300 font-mono">{totalLikes.toLocaleString()}</strong> ไลก์
-                      </div>
-                      <button
-                        onClick={handleResetLikes}
-                        className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:text-white text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                        title="รีเซ็ตยอดไลก์และกระดานอันดับเป็น 0 สำหรับเริ่มไลฟ์สดใหม่"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        รีเซ็ตเป็น 0 ไลก์
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Quick Copy Link for Current Focused Widget */}
-                  <div className="space-y-2 pt-2 border-t border-white/10">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                      คัดลอกลิงก์ OBS ของวิดเจ็ตที่เลือก:
-                    </span>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                      <button
-                        onClick={() => copyWidgetUrl('leaderboard')}
-                        className="py-1.5 px-2 rounded-xl bg-slate-950 border border-pink-500/30 hover:border-pink-400 text-pink-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(244,63,94,0.2)]"
-                        title="คัดลอกลิงก์ Like Leaderboard"
-                      >
-                        {copiedKey === 'leaderboard' ? '✓ คัดลอกแล้ว' : '1. Like'}
-                      </button>
-                      <button
-                        onClick={() => copyWidgetUrl('chat')}
-                        className="py-1.5 px-2 rounded-xl bg-slate-950 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-                        title="คัดลอกลิงก์ Chat Overlay"
-                      >
-                        {copiedKey === 'chat' ? '✓ คัดลอกแล้ว' : '2. Chat'}
-                      </button>
-                      <button
-                        onClick={() => copyWidgetUrl('gift')}
-                        className="py-1.5 px-2 rounded-xl bg-slate-950 border border-amber-500/30 hover:border-amber-400 text-amber-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-                        title="คัดลอกลิงก์ Gift Overlay"
-                      >
-                        {copiedKey === 'gift' ? '✓ คัดลอกแล้ว' : '3. Gift'}
-                      </button>
-                      <button
-                        onClick={() => copyWidgetUrl('follow')}
-                        className="py-1.5 px-2 rounded-xl bg-slate-950 border border-pink-500/30 hover:border-pink-400 text-pink-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(244,63,94,0.2)]"
-                        title="คัดลอกลิงก์ Follow Alert"
-                      >
-                        {copiedKey === 'follow' ? '✓ คัดลอกแล้ว' : '4. Follow'}
-                      </button>
-                      <button
-                        onClick={() => copyWidgetUrl('share')}
-                        className="py-1.5 px-2 rounded-xl bg-slate-950 border border-teal-500/30 hover:border-teal-400 text-teal-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(20,184,166,0.2)]"
-                        title="คัดลอกลิงก์ Share Alert"
-                      >
-                        {copiedKey === 'share' ? '✓ คัดลอกแล้ว' : '5. Share'}
-                      </button>
-                      <button
-                        onClick={() => copyWidgetUrl('alerts')}
-                        className="py-1.5 px-2 rounded-xl bg-slate-950 border border-purple-500/30 hover:border-purple-400 text-purple-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(168,85,247,0.2)]"
-                        title="คัดลอกลิงก์ Alerts Bundle (Gift+Follow+Share)"
-                      >
-                        {copiedKey === 'alerts' ? '✓ คัดลอกแล้ว' : '6. All Alerts'}
-                      </button>
-                      <button
-                        onClick={() => copyWidgetUrl('subathon')}
-                        className="py-1.5 px-2 rounded-xl bg-slate-950 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 text-[11px] font-bold transition-all text-center truncate cursor-pointer hover:shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-                        title="คัดลอกลิงก์ Subathon Timer Overlay สำหรับ OBS"
-                      >
-                        {copiedKey === 'subathon' ? '✓ คัดลอกแล้ว' : '7. Subathon'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Subathon Control Card */}
-                <SubathonControlCard
-                  seconds={subathonSeconds}
-                  isRunning={subathonIsRunning}
-                  onTogglePlay={handleToggleSubathon}
-                  onAddSeconds={handleAddSubathonTime}
-                  onResetTimer={handleResetSubathonTimer}
+                <WidgetCustomizerPanel
+                  activeWidgetView={activeWidgetView}
+                  onSelectWidgetView={setActiveWidgetView}
                   settings={settings}
                   onUpdateSettings={updateSettings}
-                  onCopyObsUrl={(type) => copyWidgetUrl(type as any)}
+                  totalLikes={totalLikes}
+                  onResetLikes={handleResetLikes}
+                  onOpenGallery={() => setActiveTab('themes')}
+                  onCopyUrl={copyWidgetUrl}
+                  copiedKey={copiedKey}
+                  subathonSeconds={subathonSeconds}
+                  subathonIsRunning={subathonIsRunning}
+                  onToggleSubathon={handleToggleSubathon}
+                  onAddSubathonTime={handleAddSubathonTime}
+                  onResetSubathon={handleResetSubathonTimer}
                 />
-
-                {/* TTS Control Card */}
-                <ChatTtsControlCard settings={settings} onUpdateSettings={updateSettings} />
-
-                {/* OBS Helper Card */}
-                <div className="bg-gradient-to-br from-cyan-950/30 via-slate-900 to-purple-950/30 border border-cyan-500/20 rounded-3xl p-4 text-xs space-y-2">
-                  <div className="flex items-center gap-2 text-cyan-300 font-bold">
-                    <Sparkles className="w-4 h-4" />
-                    <span>เคล็ดลับการใช้งานใน OBS Studio:</span>
-                  </div>
-                  <p className="text-slate-400 leading-relaxed">
-                    เพิ่มแหล่งสัญญาณแบบ <strong>Browser Source</strong> แล้ววาง URL ลงไป ตัววิดเจ็ตจะมีพื้นหลังโปร่งใส สามารถนำไปวางทับภาพเกมหรือกล้องเว็บแคมได้ทันที
-                  </p>
-                  <button
-                    onClick={() => setActiveTab('links')}
-                    className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 pt-1 cursor-pointer"
-                  >
-                    ดูคำแนะนำและลิงก์ทั้งหมด &rarr;
-                  </button>
-                </div>
               </div>
             </div>
 

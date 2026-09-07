@@ -43,9 +43,12 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
 
   // Parse URL search params
   const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-  const themeParam = (urlParams.get('theme') as ChatThemeId) || 'cyberpunk-neon';
+  const rawTheme = urlParams.get('theme');
+  const themeParam = ((rawTheme === 'comic-pop-pink' ? 'comic-pop' : rawTheme) as ChatThemeId) || 'twitch-glow-dynamic';
   const autoHideParam = Number(urlParams.get('autohide') || 10);
   const fontSizeParam = (urlParams.get('fontsize') as 'sm' | 'base' | 'lg' | 'xl') || 'base';
+  const layoutParam = (urlParams.get('layout') as 'vertical' | 'horizontal') || 'vertical';
+  const showTimestampsParam = urlParams.get('timestamp') !== '0';
   const styleParam = (urlParams.get('style') as 'podium-card' | 'compact-ticker' | 'glass-list' | 'neon-glow') || 'podium-card';
   const goalParam = Number(urlParams.get('goal') || 25000);
   const showGoalParam = urlParams.get('showgoal') !== '0';
@@ -74,7 +77,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   // Subathon URL Params
   const subathonThemeParam = (urlParams.get('subathontheme') || urlParams.get('theme') || 'cyberpunk-neon') as SubathonThemeId;
   const subathonFontParam = (urlParams.get('subathonfont') || urlParams.get('font') || 'orbitron') as SubathonFontId;
-  const subathonStyleParam = (urlParams.get('subathonstyle') as 'card' | 'frameless') || 'frameless';
+  const subathonStyleParam = (urlParams.get('subathonstyle') as 'card' | 'frameless' | 'viperuex') || (String(subathonThemeParam).startsWith('viper-') ? 'viperuex' : 'frameless');
   const subathonTitleParam = urlParams.get('subathontitle') || 'SUBATHON MARATHON';
   const subathonSecParam = Number(urlParams.get('subathonsec') || 7200);
   const subathonCapParam = Number(urlParams.get('subathoncap') || 12);
@@ -85,6 +88,8 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     chatAutoHideSeconds: autoHideParam,
     chatShowAvatars: true,
     chatShowBadges: true,
+    chatShowTimestamps: showTimestampsParam,
+    chatLayout: layoutParam,
     chatDirection: 'down',
     chatSoundEnabled: true,
     chatMaxMessages: 15,

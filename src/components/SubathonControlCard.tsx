@@ -107,7 +107,7 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
     setCustomSeconds(secs);
   };
 
-  const [themeFilter, setThemeFilter] = useState<'all' | '3d' | 'classic'>('all');
+  const [themeFilter, setThemeFilter] = useState<'all' | 'video' | '3d' | 'classic'>('video');
 
   const getThemeIcon = (id: SubathonThemeId) => {
     switch (id) {
@@ -202,7 +202,7 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
         </div>
       </div>
 
-      {/* Display Style Selector: Frameless (Clean: Time + Bottom Bar) vs Card Box */}
+      {/* Display Style Selector: Viperuex (Video Stream Widget) vs Frameless vs Card Box */}
       <div className="bg-slate-950/80 p-2.5 rounded-2xl border border-white/10 space-y-2">
         <div className="flex items-center justify-between px-1">
           <span className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
@@ -210,39 +210,58 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
             <span>สไตล์แสดงผลบนจอ (Style):</span>
           </span>
           <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-            {settings.subathonStyle === 'frameless' ? '✨ ไม่มีกรอบ (แค่เวลา + หลอดล่าง)' : '🔲 มีกรอบการ์ด'}
+            {settings.subathonStyle === 'viperuex'
+              ? '🎬 ตามคลิปวีดีโอ'
+              : settings.subathonStyle === 'frameless'
+              ? '✨ ไม่มีกรอบ คลีน'
+              : '🔲 มีกรอบการ์ด'}
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
+          <button
+            onClick={() => onUpdateSettings({ subathonStyle: 'viperuex' })}
+            className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer text-center ${
+              settings.subathonStyle === 'viperuex'
+                ? 'bg-pink-500/25 text-pink-300 border border-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.35)] ring-1 ring-pink-400'
+                : 'bg-slate-900/80 text-slate-400 hover:text-white border border-white/10 hover:bg-slate-800'
+            }`}
+          >
+            <div className="flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+              <span className="truncate">🎬 ตามคลิป</span>
+            </div>
+            <span className="text-[9px] text-slate-400 font-normal">หน้าปัด เกียร์ LED</span>
+          </button>
+
           <button
             onClick={() => onUpdateSettings({ subathonStyle: 'frameless' })}
-            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer text-center ${
+            className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer text-center ${
               settings.subathonStyle === 'frameless'
                 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)] ring-1 ring-cyan-400'
                 : 'bg-slate-900/80 text-slate-400 hover:text-white border border-white/10 hover:bg-slate-800'
             }`}
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>ไม่มีกรอบ คลีน</span>
+              <span className="truncate">✨ ไม่มีกรอบ</span>
             </div>
-            <span className="text-[10px] text-slate-400 font-normal">เอาแค่เวลา + หลอดล่าง</span>
+            <span className="text-[9px] text-slate-400 font-normal">แค่เวลา + หลอด</span>
           </button>
 
           <button
             onClick={() => onUpdateSettings({ subathonStyle: 'card' })}
-            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer text-center ${
+            className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer text-center ${
               settings.subathonStyle === 'card'
                 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)] ring-1 ring-cyan-400'
                 : 'bg-slate-900/80 text-slate-400 hover:text-white border border-white/10 hover:bg-slate-800'
             }`}
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <Timer className="w-3.5 h-3.5 text-slate-300" />
-              <span>มีกรอบการ์ด</span>
+              <span className="truncate">🔲 มีกรอบ</span>
             </div>
-            <span className="text-[10px] text-slate-400 font-normal">กล่องพร้อมหัวข้อ/สถานะ</span>
+            <span className="text-[9px] text-slate-400 font-normal">กล่องมาตรฐาน</span>
           </button>
         </div>
       </div>
@@ -602,7 +621,7 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
       {/* Tab 2: Theme Selector */}
       {activeTab === 'theme' && (
         <div className="space-y-3 animate-fadeIn">
-          {/* Frameless vs Card Style Toggle */}
+          {/* Frameless vs Viperuex vs Card Style Toggle */}
           <div className="p-2.5 rounded-2xl bg-slate-950 border border-white/10 space-y-1.5">
             <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
@@ -610,10 +629,24 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
                 <span>รูปแบบการแสดงผล:</span>
               </span>
               <span className="text-[10px] text-cyan-400">
-                {settings.subathonStyle === 'frameless' ? 'ไม่มีกรอบ คลีน' : 'มีกรอบการ์ด'}
+                {settings.subathonStyle === 'viperuex'
+                  ? '🎬 ตามคลิปวีดีโอ'
+                  : settings.subathonStyle === 'frameless'
+                  ? '✨ ไม่มีกรอบ คลีน'
+                  : '🔲 มีกรอบการ์ด'}
               </span>
             </label>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                onClick={() => onUpdateSettings({ subathonStyle: 'viperuex' })}
+                className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  settings.subathonStyle === 'viperuex'
+                    ? 'bg-pink-500/25 text-pink-300 border border-pink-400 shadow ring-1 ring-pink-400/40'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-white/10'
+                }`}
+              >
+                🎬 ตามคลิปวีดีโอ
+              </button>
               <button
                 onClick={() => onUpdateSettings({ subathonStyle: 'frameless' })}
                 className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -622,7 +655,7 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-white/10'
                 }`}
               >
-                ✨ ไม่มีกรอบ (แค่เวลา + หลอดล่าง)
+                ✨ ไม่มีกรอบ
               </button>
               <button
                 onClick={() => onUpdateSettings({ subathonStyle: 'card' })}
@@ -632,7 +665,7 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-white/10'
                 }`}
               >
-                🔲 มีกรอบการ์ด (Card Box)
+                🔲 มีกรอบการ์ด
               </button>
             </div>
           </div>
@@ -646,10 +679,10 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
             </div>
 
             {/* Category Filter Chips */}
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950 border border-white/10 text-[11px]">
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950 border border-white/10 text-[11px] overflow-x-auto">
               <button
                 onClick={() => setThemeFilter('all')}
-                className={`flex-1 py-1 px-2 rounded-lg font-bold transition-all cursor-pointer text-center ${
+                className={`py-1 px-2.5 rounded-lg font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
                   themeFilter === 'all'
                     ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -658,52 +691,67 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
                 ทั้งหมด ({SUBATHON_THEMES.length})
               </button>
               <button
+                onClick={() => setThemeFilter('video')}
+                className={`py-1 px-2.5 rounded-lg font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1 whitespace-nowrap ${
+                  themeFilter === 'video'
+                    ? 'bg-gradient-to-r from-pink-500/25 to-rose-500/25 text-pink-300 border border-pink-400/50 shadow-sm ring-1 ring-pink-400/40'
+                    : 'text-slate-400 hover:text-pink-300'
+                }`}
+              >
+                <span>🎬 ตามคลิป ({SUBATHON_THEMES.filter((t) => t.isViper).length})</span>
+              </button>
+              <button
                 onClick={() => setThemeFilter('3d')}
-                className={`flex-1 py-1 px-2 rounded-lg font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1 ${
+                className={`py-1 px-2.5 rounded-lg font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1 whitespace-nowrap ${
                   themeFilter === '3d'
                     ? 'bg-gradient-to-r from-cyan-500/25 to-purple-500/25 text-cyan-300 border border-cyan-400/50 shadow-sm ring-1 ring-cyan-400/40'
                     : 'text-slate-400 hover:text-cyan-300'
                 }`}
               >
-                <span>✨ 3D มีมิติ</span>
-                <span className="text-[9px] px-1 py-0.2 rounded bg-cyan-400/20 text-cyan-300 font-mono">
-                  {SUBATHON_THEMES.filter((t) => t.is3D).length}
-                </span>
+                <span>✨ 3D ({SUBATHON_THEMES.filter((t) => t.is3D).length})</span>
               </button>
               <button
                 onClick={() => setThemeFilter('classic')}
-                className={`flex-1 py-1 px-2 rounded-lg font-bold transition-all cursor-pointer text-center ${
+                className={`py-1 px-2.5 rounded-lg font-bold transition-all cursor-pointer text-center whitespace-nowrap ${
                   themeFilter === 'classic'
                     ? 'bg-white/10 text-white border border-white/20 shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                คลาสสิก ({SUBATHON_THEMES.filter((t) => !t.is3D).length})
+                คลาสสิก ({SUBATHON_THEMES.filter((t) => !t.is3D && !t.isViper).length})
               </button>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             {SUBATHON_THEMES.filter((theme) => {
+              if (themeFilter === 'video') return theme.isViper;
               if (themeFilter === '3d') return theme.is3D;
-              if (themeFilter === 'classic') return !theme.is3D;
+              if (themeFilter === 'classic') return !theme.is3D && !theme.isViper;
               return true;
             }).map((theme) => {
               const isSelected = settings.subathonTheme === theme.id;
               return (
                 <button
                   key={theme.id}
-                  onClick={() => onUpdateSettings({ subathonTheme: theme.id })}
+                  onClick={() => {
+                    onUpdateSettings({
+                      subathonTheme: theme.id,
+                      ...(theme.isViper && settings.subathonStyle === 'card' ? { subathonStyle: 'viperuex' } : {}),
+                    });
+                  }}
                   className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 relative overflow-hidden ${
                     isSelected
                       ? 'bg-slate-800 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.25)] ring-1 ring-cyan-400'
                       : 'bg-slate-950 border-white/10 hover:border-white/20 hover:bg-white/5'
                   }`}
                 >
-                  {/* Subtle 3D indicator glow */}
-                  {theme.is3D && (
+                  {/* Subtle 3D or Viper indicator glow */}
+                  {theme.isViper ? (
+                    <div className="absolute top-0 right-0 w-14 h-14 bg-gradient-to-bl from-pink-500/15 to-transparent pointer-events-none" />
+                  ) : theme.is3D ? (
                     <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-cyan-400/10 to-transparent pointer-events-none" />
-                  )}
+                  ) : null}
 
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -711,7 +759,12 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
                       <span className="text-xs font-bold text-white truncate">{theme.name}</span>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      {theme.is3D && (
+                      {theme.isViper && (
+                        <span className="text-[8px] px-1.5 py-0.2 rounded bg-pink-500/25 text-pink-300 font-extrabold border border-pink-400/40">
+                          🎬 วีดีโอ
+                        </span>
+                      )}
+                      {theme.is3D && !theme.isViper && (
                         <span className="text-[8px] px-1 py-0.2 rounded bg-cyan-500/25 text-cyan-300 font-extrabold border border-cyan-400/40">
                           3D
                         </span>

@@ -1,4 +1,9 @@
 export type SubathonThemeId =
+  | 'viper-cyber-pink'
+  | 'viper-cyber-dark'
+  | 'viper-sakura-mint'
+  | 'viper-navy-gold'
+  | 'viper-twitch-purple'
   | 'cyberpunk-neon'
   | 'gold-luxury'
   | 'kawaii-pastel'
@@ -37,6 +42,33 @@ export interface SubathonFontConfig {
   description: string;
 }
 
+export interface ViperThemeConfig {
+  cardBg: string;
+  borderClass: string;
+  borderGlow: string;
+  accentGlow: string;
+  rivetColor: string;
+  dialTrackColor: string;
+  dialProgressGradient: [string, string];
+  dialTicksColor: string;
+  dialTextColor: string;
+  gear1Color: string;
+  gear2Color: string;
+  titlePillBg: string;
+  titlePillBorder: string;
+  titlePillText: string;
+  statusBorder: string;
+  statusColor: string;
+  numeralsColor: string;
+  numeralsShadow: string;
+  controlsSubtextColor: string;
+  ledActiveGradient: string;
+  ledInactiveColor: string;
+  ofTargetColor: string;
+  manualTagColor: string;
+  hasSakuraAccent?: boolean;
+}
+
 export interface SubathonThemeConfig {
   id: SubathonThemeId;
   name: string;
@@ -50,6 +82,8 @@ export interface SubathonThemeConfig {
   progressBarClass: string;
   iconName: string;
   is3D?: boolean;
+  isViper?: boolean;
+  viperConfig?: ViperThemeConfig;
   digitBlockClass?: string;
   reflectionSheen?: boolean;
 }
@@ -63,11 +97,25 @@ export interface SubathonTimeAddedEvent {
 }
 
 export type ChatThemeId =
+  | 'twitch-glow-dynamic'
+  | 'twitch-glow-purple'
+  | 'twitch-glow-green'
+  | 'twitch-glow-pink'
+  | 'twitch-glow-cyan'
+  | 'twitch-glow-gold'
+  | 'twitch-glow-red'
   | 'cyberpunk-neon'
   | 'minimal-glass'
   | 'kawaii-pastel'
   | 'streamer-dark'
   | 'comic-pop'
+  | 'comic-pop-blue'
+  | 'comic-pop-gold'
+  | 'comic-pop-red'
+  | 'comic-pop-mint'
+  | 'comic-pop-dark'
+  | 'comic-pop-burst'
+  | 'comic-pop-kawaii'
   | 'aurora-gradient'
   | 'retro-arcade'
   | 'tiktok-bubble'
@@ -77,6 +125,23 @@ export type ChatThemeId =
   | '3d-floating-capsule'
   | '3d-luxury-gold'
   | '3d-gaming-crystal';
+
+export interface ComicStickerConfig {
+  word: string;
+  burstColor: string;
+  textColor: string;
+  glowColor: string;
+  borderColor: string;
+  bubbleBg: string;
+  tailPosition?: 'bottom-left' | 'bottom-right' | 'burst';
+  usernameColor: string;
+  particleColors: {
+    heart?: string;
+    star?: string;
+    diamond?: string;
+  };
+  styleVariant: 'rounded-bubble' | 'jagged-burst' | 'dark-manga' | 'pill-bubble';
+}
 
 export interface ChatBadge {
   type: 'mod' | 'vip' | 'sub' | 'top_fan' | 'verified';
@@ -89,12 +154,21 @@ export interface ChatBadge {
 export interface ChatMessage {
   id: string;
   username: string;
-  avatarUrl: string;
+  avatarUrl?: string;
   message: string;
   timestamp: number;
   badges?: ('mod' | 'vip' | 'sub' | 'top_fan' | 'verified')[];
   color?: string;
   highlighted?: boolean;
+  roleTag?: string;
+  roleColor?: string;
+  roleType?: 'streamer' | 'queen' | 'mod' | 'vip' | 'sub' | 'coder' | 'memer' | 'viewer';
+  rightIcon?: 'crown' | 'diamond' | 'shield' | 'star' | 'flower' | 'sparkle' | 'heart' | 'pepe';
+  isEvent?: boolean;
+  eventType?: 'resub' | 'redeem' | 'cheer' | 'follow';
+  eventText?: string;
+  eventIcon?: string;
+  eventColor?: string;
 }
 
 export interface ChatThemeConfig {
@@ -110,7 +184,11 @@ export interface ChatThemeConfig {
   avatarShape: 'circle' | 'rounded' | 'squircle' | 'hex';
   accentBorder: string;
   is3D?: boolean;
-  category?: '3d' | 'modern' | 'gaming' | 'cute';
+  isComic?: boolean;
+  comicConfig?: ComicStickerConfig;
+  isTwitchGlow?: boolean;
+  twitchGlowVariant?: 'dynamic' | 'purple' | 'green' | 'pink' | 'cyan' | 'gold' | 'red';
+  category?: 'twitch' | '3d' | 'modern' | 'gaming' | 'cute' | 'comic';
 }
 
 export interface LikeUser {
@@ -180,6 +258,8 @@ export interface OverlayCustomSettings {
   chatAutoHideSeconds: number; // 0 = never
   chatShowAvatars: boolean;
   chatShowBadges: boolean;
+  chatShowTimestamps: boolean;
+  chatLayout: 'vertical' | 'horizontal';
   chatDirection: 'up' | 'down';
   chatSoundEnabled: boolean;
   chatMaxMessages: number;
@@ -232,7 +312,7 @@ export interface OverlayCustomSettings {
   // Subathon Timer (โหมดจับเวลามาราธอน หลากหลายธีม)
   subathonTheme: SubathonThemeId;
   subathonFont: SubathonFontId;
-  subathonStyle: 'card' | 'frameless'; // 'frameless' = ไม่มีกรอบ (แค่เวลา + หลอดล่าง), 'card' = มีกรอบการ์ด
+  subathonStyle: 'card' | 'frameless' | 'viperuex'; // 'viperuex' = สไตล์ Stream Widget ตามคลิปวีดีโอ, 'frameless' = ไม่มีกรอบ, 'card' = มีกรอบการ์ด
   subathonStartSeconds?: number; // เวลาเริ่มต้นที่กำหนดเอง (วินาที)
   subathonTitle: string;
   subathonAutoAdd: boolean;

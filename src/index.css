@@ -70,3 +70,17 @@ html.obs-mode {
   background-image: radial-gradient(rgba(0, 0, 0, 0.2) 1.5px, transparent 1.5px);
   background-size: 10px 10px;
 }
+
+@keyframes spinReverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-spin-reverse {
+  animation: spinReverse 8s linear infinite;
+}
+
