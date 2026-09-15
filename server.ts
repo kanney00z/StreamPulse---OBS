@@ -121,7 +121,154 @@ async function fetchGoogleThaiTts(fullText: string, speed = 1): Promise<Buffer> 
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', hasGeminiKey: !!process.env.GEMINI_API_KEY, engine: 'AI_STUDIO_TTS' });
+  res.json({
+    status: 'ok',
+    hasGeminiKey: !!process.env.GEMINI_API_KEY,
+    engine: 'AI_STUDIO_TTS',
+    realtimeClients: sseClients.size,
+  });
+});
+
+// ==========================================
+// REAL-TIME OVERLAY SYNC ENGINE (OBS Studio)
+// ==========================================
+interface StreamSyncState {
+  settings: Record<string, any>;
+  subathonSeconds?: number;
+  subathonIsRunning?: boolean;
+  totalLikes?: number;
+  updatedAt: number;
+}
+
+let currentSyncState: StreamSyncState = {
+  settings: {},
+  updatedAt: Date.now(),
+};
+
+interface SSEClient {
+  id: string;
+  res: express.Response;
+  clientType: string;
+  joinedAt: number;
+}
+
+const sseClients = new Set<SSEClient>();
+
+function broadcastSSE(eventType: string, data: any) {
+  const payload = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const client of Array.from(sseClients)) {
+    try {
+      client.res.write(payload);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}
+
+// 15-second heartbeat ping to prevent connection timeout across any proxy/firewall
+setInterval(() => {
+  const pingMsg = `event: ping\ndata: ${Date.now()}\n\n`;
+  for (const client of Array.from(sseClients)) {
+    try {
+      client.res.write(pingMsg);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}, 15000);
+
+// SSE connection endpoint for OBS Browser Source and Dashboards
+app.get('/api/sync/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const clientId = (req.query.sessionId as string) || Math.random().toString(36).substring(2, 9);
+  const clientType = (req.query.type as string) || 'unknown';
+  const client: SSEClient = { id: clientId, res, clientType, joinedAt: Date.now() };
+
+  sseClients.add(client);
+  console.log(`[Realtime SSE] Client connected: ${clientId} (${clientType}). Total active: ${sseClients.size}`);
+
+  // Send initial full snapshot immediately
+  res.write(`event: init\ndata: ${JSON.stringify(currentSyncState)}\n\n`);
+
+  req.on('close', () => {
+    sseClients.delete(client);
+    console.log(`[Realtime SSE] Client disconnected: ${clientId}. Remaining: ${sseClients.size}`);
+  });
+});
+
+// Update settings and instantly broadcast to OBS
+app.post('/api/sync/settings', (req, res) => {
+  try {
+    const raw = req.body;
+    const incoming =
+      raw?.settings && typeof raw.settings === 'object' && !Array.isArray(raw.settings)
+        ? raw.settings
+        : raw;
+
+    if (incoming && typeof incoming === 'object' && !Array.isArray(incoming)) {
+      currentSyncState.settings = {
+        ...currentSyncState.settings,
+        ...incoming,
+      };
+      currentSyncState.updatedAt = Date.now();
+
+      broadcastSSE('settings_update', incoming);
+      return res.json({ ok: true, activeClients: sseClients.size });
+    }
+    return res.status(400).json({ error: 'Invalid settings object' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message });
+  }
+});
+
+// Broadcast live stream events (chat messages, gifts, likes, follows, shares, subathon actions)
+app.post('/api/sync/event', (req, res) => {
+  try {
+    const event = req.body;
+    if (!event || !event.type) {
+      return res.status(400).json({ error: 'Invalid event payload' });
+    }
+
+    // Keep state updated for persistent indicators
+    if (event.type === 'subathon_state' && event.payload) {
+      if (typeof event.payload.seconds === 'number') {
+        currentSyncState.subathonSeconds = event.payload.seconds;
+      }
+      if (typeof event.payload.isRunning === 'boolean') {
+        currentSyncState.subathonIsRunning = event.payload.isRunning;
+      }
+    } else if (event.type === 'likes' && event.payload && typeof event.payload.total === 'number') {
+      currentSyncState.totalLikes = event.payload.total;
+    }
+
+    broadcastSSE('stream_event', event);
+    return res.json({ ok: true, activeClients: sseClients.size });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message });
+  }
+});
+
+// Fetch current snapshot and connection health metrics
+app.get('/api/sync/state', (req, res) => {
+  const clientsList = Array.from(sseClients).map((c) => ({
+    id: c.id,
+    type: c.clientType,
+    uptimeSeconds: Math.floor((Date.now() - c.joinedAt) / 1000),
+  }));
+
+  res.json({
+    state: currentSyncState,
+    metrics: {
+      totalClients: sseClients.size,
+      obsClients: clientsList.filter((c) => c.type === 'obs').length,
+      clients: clientsList,
+    },
+  });
 });
 
 // Primary AI Text-To-Speech endpoint (Guaranteed 100% Thai Female / Male AI voice)

@@ -167,6 +167,28 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
         </div>
       </div>
 
+      {/* Real-Time Live Sync Active Highlight Banner */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/60 via-slate-900 to-indigo-950/50 border border-cyan-400/30 shadow-[0_0_20px_rgba(6,182,212,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)] shrink-0">
+            <Zap className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white tracking-wide">
+                ⚡ ระบบซิงค์สด OBS Real-Time (Live Mirror)
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 animate-pulse">
+                ซิงค์สดอัตโนมัติ
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              คัดลอกลิงก์ไปใส่ใน OBS Browser Source ครั้งเดียว — ไม่ว่าจะเปลี่ยนธีม, ปรับขนาดตัวหนังสือ, แก้ไขเสียง TTS, เพิ่มเวลา Subathon หรือสั่งตัวละคร Avatars เดิน/หายตัว OBS จะอัปเดตตามทันทีโดยไม่ต้องกดรีเฟรช!
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* IndoFinity Auto-Bridge Notice & Port Switcher */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-slate-900 to-purple-950/30 border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">

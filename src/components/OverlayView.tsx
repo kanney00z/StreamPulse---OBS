@@ -26,6 +26,7 @@ import {
 import { sounds } from '../utils/soundEffects';
 import { ttsService } from '../utils/ttsService';
 import { IndoFinityClient } from '../services/indofinityService';
+import { realtimeSync } from '../services/realtimeSync';
 
 interface OverlayViewProps {
   overlayType: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all';
@@ -352,6 +353,98 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     }, 1000);
     return () => clearInterval(interval);
   }, [subathonIsRunning]);
+
+  // Keep ref to latest settings so real-time event handlers always use fresh values
+  const settingsRef = useRef(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
+  // Connect to Real-Time Live Sync Engine (Web Dashboard <-> OBS Studio Mirror)
+  useEffect(() => {
+    const unsubscribe = realtimeSync.subscribe({
+      clientType: 'obs',
+      onInit: (state) => {
+        if (state.settings && Object.keys(state.settings).length > 0) {
+          setSettings((prev) => ({ ...prev, ...state.settings }));
+        }
+        if (typeof state.subathonSeconds === 'number') {
+          setSubathonSeconds(state.subathonSeconds);
+        }
+        if (typeof state.subathonIsRunning === 'boolean') {
+          setSubathonIsRunning(state.subathonIsRunning);
+        }
+        if (typeof state.totalLikes === 'number') {
+          setTotalLikes(state.totalLikes);
+        }
+      },
+      onSettingsUpdate: (newSettings) => {
+        setSettings((prev) => ({ ...prev, ...newSettings }));
+      },
+      onStreamEvent: (event) => {
+        const curSettings = settingsRef.current;
+        switch (event.type) {
+          case 'chat_message': {
+            const msg = event.payload;
+            sounds.playChat();
+            setMessages((prev) => [...prev.slice(-25), msg]);
+            if (curSettings.chatTtsEnabled) {
+              ttsService.speakChat(msg.username, msg.message);
+            }
+            break;
+          }
+          case 'gift_alert': {
+            const alert = event.payload;
+            if (alert.comboCount > 1) {
+              sounds.playCombo(alert.comboCount);
+            } else {
+              sounds.playGift(alert.gift?.rarity);
+            }
+            setCurrentGiftAlert(alert);
+            if (giftTimeoutRef.current) clearTimeout(giftTimeoutRef.current);
+            giftTimeoutRef.current = setTimeout(() => {
+              setCurrentGiftAlert(null);
+            }, (curSettings.giftDuration || 4) * 1000);
+
+            if (curSettings.subathonAutoAdd && curSettings.subathonAddPerCoin > 0) {
+              const coinTotal = (alert.gift?.coinValue || 1) * (alert.amount || 1);
+              const addedSecs = Math.max(1, Math.round(coinTotal * curSettings.subathonAddPerCoin));
+              handleAddSubathonTime(addedSecs, alert.gift?.nameTh || alert.gift?.name, alert.senderName);
+            }
+            break;
+          }
+          case 'follow_alert':
+            handleFollowAlert(event.payload);
+            break;
+          case 'share_alert':
+            handleShareAlert(event.payload);
+            break;
+          case 'likes':
+            handleAddLikes(event.payload.count || 1, event.payload.user, event.payload.total);
+            break;
+          case 'subathon_add_time':
+            handleAddSubathonTime(event.payload.seconds, event.payload.reason, event.payload.senderName);
+            break;
+          case 'subathon_state':
+            if (typeof event.payload.seconds === 'number') setSubathonSeconds(event.payload.seconds);
+            if (typeof event.payload.isRunning === 'boolean') setSubathonIsRunning(event.payload.isRunning);
+            break;
+          case 'clear_chat':
+            setMessages([]);
+            break;
+          case 'reset_state':
+            setMessages([]);
+            setLeaderboard([]);
+            setTotalLikes(0);
+            break;
+        }
+      },
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   // Connect to IndoFinity WebSocket
   useEffect(() => {

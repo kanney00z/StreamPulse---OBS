@@ -67,6 +67,7 @@ import { WidgetCustomizerPanel } from './components/WidgetCustomizerPanel';
 import { getIndoFinityClient, IndoFinityClient } from './services/indofinityService';
 import { sounds } from './utils/soundEffects';
 import { ttsService } from './utils/ttsService';
+import { realtimeSync } from './services/realtimeSync';
 
 export default function App() {
   // Check if opened as standalone OBS Browser Source overlay
@@ -203,6 +204,29 @@ export default function App() {
   const shareTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoSimIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Active OBS Studio client connections counter
+  const [activeObsClients, setActiveObsClients] = useState<number>(0);
+
+  // Broadcast initial settings on load and poll OBS connection status
+  useEffect(() => {
+    if (isOverlayMode) return;
+    realtimeSync.broadcastSettings(settings, true);
+
+    const checkState = () => {
+      fetch('/api/sync/state')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data?.metrics?.obsClients !== undefined) {
+            setActiveObsClients(data.metrics.obsClients);
+          }
+        })
+        .catch(() => {});
+    };
+    checkState();
+    const interval = setInterval(checkState, 3500);
+    return () => clearInterval(interval);
+  }, [isOverlayMode]);
+
   // Sync sound mute/unmute and TTS settings
   const settingsRef = useRef(settings);
   useEffect(() => {
@@ -246,6 +270,16 @@ export default function App() {
       return Math.max(0, Math.min(maxCap, target));
     });
 
+    // Broadcast to OBS Studio Browser Source in real-time
+    realtimeSync.broadcastStreamEvent({
+      type: 'subathon_add_time',
+      payload: {
+        seconds: secsToAdd,
+        reason: reason || (secsToAdd > 0 ? 'เพิ่มเวลา' : 'ลดเวลา'),
+        senderName,
+      },
+    });
+
     if (settings.subathonSoundEnabled && soundEnabled) {
       if (secsToAdd > 0) {
         sounds.playTimerAdd();
@@ -268,17 +302,35 @@ export default function App() {
   };
 
   const handleToggleSubathon = () => {
-    setSubathonIsRunning((prev) => !prev);
+    setSubathonIsRunning((prev) => {
+      const next = !prev;
+      realtimeSync.broadcastStreamEvent({
+        type: 'subathon_state',
+        payload: { isRunning: next, seconds: subathonSeconds },
+      });
+      return next;
+    });
   };
 
   const handleResetSubathonTimer = (newSecs: number = 7200) => {
     setSubathonSeconds(newSecs);
+    realtimeSync.broadcastStreamEvent({
+      type: 'subathon_state',
+      payload: { seconds: newSecs, isRunning: true },
+    });
   };
 
   // Action: Add Likes (supports real TikTok user from IndoFinity)
   const handleAddLikes = (count: number, user?: LikeUser, total?: number) => {
     sounds.playLike();
-    setTotalLikes((prev) => (total !== undefined ? total : prev + count));
+    const nextTotal = total !== undefined ? total : totalLikes + count;
+    setTotalLikes(nextTotal);
+
+    // Broadcast to OBS Studio Browser Source in real-time
+    realtimeSync.broadcastStreamEvent({
+      type: 'likes',
+      payload: { count, user, total: nextTotal },
+    });
 
     // Subathon auto-add from likes
     if (settings.subathonAutoAdd && settings.subathonAddPer100Likes > 0 && count >= 10) {
@@ -340,6 +392,24 @@ export default function App() {
     setTotalLikes(0);
     setLeaderboard([]);
     setSettings((prev) => ({ ...prev, currentLikes: 0 }));
+    realtimeSync.broadcastSettings({ currentLikes: 0 });
+    realtimeSync.broadcastStreamEvent({
+      type: 'likes',
+      payload: { count: 0, total: 0 },
+    });
+  };
+
+  // Helper to post chat message locally and sync to OBS in real-time
+  const postChatMessage = (msg: ChatMessage) => {
+    sounds.playChat();
+    setMessages((prev) => [...prev, msg]);
+    realtimeSync.broadcastStreamEvent({
+      type: 'chat_message',
+      payload: msg,
+    });
+    if (settingsRef.current.chatTtsEnabled && soundEnabled) {
+      ttsService.speakChat(msg.username, msg.message);
+    }
   };
 
   // Action: Send Chat
@@ -360,8 +430,6 @@ export default function App() {
       | 'stickers'
       | 'tip'
   ) => {
-    sounds.playChat();
-
     // 1. Multistream video exact presets
     if (rolePreset === 'twitch') {
       const msg: ChatMessage = {
@@ -376,8 +444,7 @@ export default function App() {
         badges: ['verified'],
         color: '#f472b6',
       };
-      setMessages((prev) => [...prev, msg]);
-      if (settingsRef.current.chatTtsEnabled) ttsService.speakChat(msg.username, msg.message);
+      postChatMessage(msg);
       return;
     }
 
@@ -393,8 +460,7 @@ export default function App() {
         roleColor: '#22c55e',
         color: '#4ade80',
       };
-      setMessages((prev) => [...prev, msg]);
-      if (settingsRef.current.chatTtsEnabled) ttsService.speakChat(msg.username, msg.message);
+      postChatMessage(msg);
       return;
     }
 
@@ -411,8 +477,7 @@ export default function App() {
         badges: ['top_fan'],
         color: '#22d3ee',
       };
-      setMessages((prev) => [...prev, msg]);
-      if (settingsRef.current.chatTtsEnabled) ttsService.speakChat(msg.username, msg.message);
+      postChatMessage(msg);
       return;
     }
 
@@ -429,8 +494,7 @@ export default function App() {
         badges: ['sub'],
         color: '#f43f5e',
       };
-      setMessages((prev) => [...prev, msg]);
-      if (settingsRef.current.chatTtsEnabled) ttsService.speakChat(msg.username, msg.message);
+      postChatMessage(msg);
       return;
     }
 
@@ -447,7 +511,7 @@ export default function App() {
         emotes: ['shiba', 'cheer'],
         color: '#38bdf8',
       };
-      setMessages((prev) => [...prev, msg]);
+      postChatMessage(msg);
       return;
     }
 
@@ -465,8 +529,7 @@ export default function App() {
         eventText: 'nelly Now Tipped $16!',
         color: '#ec4899',
       };
-      setMessages((prev) => [...prev, msg]);
-      if (settingsRef.current.chatTtsEnabled) ttsService.speakChat(msg.username, 'nelly ทิป $16');
+      postChatMessage(msg);
       return;
     }
 
@@ -496,7 +559,7 @@ export default function App() {
         eventText,
       };
 
-      setMessages((prev) => [...prev, eventMsg]);
+      postChatMessage(eventMsg);
       return;
     }
 
@@ -533,10 +596,7 @@ export default function App() {
       highlighted: Math.random() > 0.8,
     };
 
-    setMessages((prev) => [...prev, newMsg]);
-    if (settingsRef.current.chatTtsEnabled) {
-      ttsService.speakChat(newMsg.username, newMsg.message);
-    }
+    postChatMessage(newMsg);
   };
 
   // Action: Send Gift Alert
@@ -569,6 +629,12 @@ export default function App() {
 
     setCurrentGiftAlert(alert);
 
+    // Broadcast to OBS in real-time
+    realtimeSync.broadcastStreamEvent({
+      type: 'gift_alert',
+      payload: alert,
+    });
+
     if (giftTimeoutRef.current) clearTimeout(giftTimeoutRef.current);
     giftTimeoutRef.current = setTimeout(() => {
       setCurrentGiftAlert(null);
@@ -589,6 +655,12 @@ export default function App() {
     }
     setCurrentFollowAlert(alert);
     setSettings((prev) => ({ ...prev, streamFollowCount: prev.streamFollowCount + 1 }));
+
+    // Broadcast to OBS in real-time
+    realtimeSync.broadcastStreamEvent({
+      type: 'follow_alert',
+      payload: alert,
+    });
 
     if (settingsRef.current.followTtsEnabled && settingsRef.current.chatTtsEnabled && soundEnabled) {
       ttsService.speakFollow(alert.username);
@@ -615,6 +687,12 @@ export default function App() {
       ...prev,
       streamShareCount: prev.streamShareCount + (alert.shareCount || 1),
     }));
+
+    // Broadcast to OBS in real-time
+    realtimeSync.broadcastStreamEvent({
+      type: 'share_alert',
+      payload: alert,
+    });
 
     if (settingsRef.current.shareTtsEnabled && settingsRef.current.chatTtsEnabled && soundEnabled) {
       ttsService.speakShare(alert.username);
@@ -664,11 +742,7 @@ export default function App() {
       onStatusChange: (status) => setIndoFinityStatus(status),
       onLog: () => setIndoFinityLogs([...client.getLogs()]),
       onChat: (msg) => {
-        sounds.playChat();
-        setMessages((prev) => [...prev.slice(-20), msg]);
-        if (settingsRef.current.chatTtsEnabled) {
-          ttsService.speakChat(msg.username, msg.message);
-        }
+        postChatMessage(msg);
       },
       onLike: (data) => {
         handleAddLikes(data.count, data.user, data.totalLikes);
@@ -722,6 +796,7 @@ export default function App() {
 
   const updateSettings = (partial: Partial<OverlayCustomSettings>) => {
     setSettings((prev) => ({ ...prev, ...partial }));
+    realtimeSync.broadcastSettings(partial);
   };
 
   const copyWidgetUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars') => {
@@ -840,35 +915,58 @@ export default function App() {
             </button>
           </div>
 
-          {/* IndoFinity Live Interactive Pill */}
-          <button
-            onClick={() => setActiveTab('indofinity')}
-            className={`flex items-center gap-2 px-3 py-1 border rounded-full transition-all cursor-pointer ${
-              indoFinityStatus === 'connected'
-                ? 'bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400'
-                : indoFinityStatus === 'connecting'
-                ? 'bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20 text-amber-300'
-                : 'bg-slate-900 border-white/15 hover:border-white/30 text-slate-400'
-            }`}
-            title="คลิกเพื่อเปิด IndoFinity Bridge Manager"
-          >
+          <div className="flex items-center gap-2">
+            {/* OBS Studio Live Real-Time Sync Indicator */}
             <div
-              className={`w-2 h-2 rounded-full ${
-                indoFinityStatus === 'connected'
-                  ? 'bg-emerald-400 animate-pulse'
-                  : indoFinityStatus === 'connecting'
-                  ? 'bg-amber-400 animate-spin'
-                  : 'bg-rose-400'
+              className={`flex items-center gap-2 px-3 py-1 border rounded-full text-xs font-medium transition-all ${
+                activeObsClients > 0
+                  ? 'bg-cyan-500/15 border-cyan-400/40 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.25)]'
+                  : 'bg-slate-900 border-white/10 text-slate-400'
               }`}
-            />
-            <span className="text-xs font-medium tracking-wide">
-              {indoFinityStatus === 'connected'
-                ? 'IndoFinity 62024: Live'
-                : indoFinityStatus === 'connecting'
-                ? 'IndoFinity: Connecting...'
-                : 'IndoFinity: Offline'}
-            </span>
-          </button>
+              title="ระบบซิงค์สด OBS Real-Time: แก้ไขตั้งค่าหรือเกิดอีเวนต์ใดๆ จะแสดงผลบน OBS Studio ทันทีแบบเรียลไทม์"
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  activeObsClients > 0 ? 'bg-cyan-400 animate-ping' : 'bg-emerald-400'
+                }`}
+              />
+              <span>
+                {activeObsClients > 0
+                  ? `OBS Sync: เชื่อมต่อสด (${activeObsClients} จอ)`
+                  : 'OBS Sync: พร้อมส่งสด'}
+              </span>
+            </div>
+
+            {/* IndoFinity Live Interactive Pill */}
+            <button
+              onClick={() => setActiveTab('indofinity')}
+              className={`flex items-center gap-2 px-3 py-1 border rounded-full transition-all cursor-pointer ${
+                indoFinityStatus === 'connected'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400'
+                  : indoFinityStatus === 'connecting'
+                  ? 'bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20 text-amber-300'
+                  : 'bg-slate-900 border-white/15 hover:border-white/30 text-slate-400'
+              }`}
+              title="คลิกเพื่อเปิด IndoFinity Bridge Manager"
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  indoFinityStatus === 'connected'
+                    ? 'bg-emerald-400 animate-pulse'
+                    : indoFinityStatus === 'connecting'
+                    ? 'bg-amber-400 animate-spin'
+                    : 'bg-rose-400'
+                }`}
+              />
+              <span className="text-xs font-medium tracking-wide">
+                {indoFinityStatus === 'connected'
+                  ? 'IndoFinity 62024: Live'
+                  : indoFinityStatus === 'connecting'
+                  ? 'IndoFinity: Connecting...'
+                  : 'IndoFinity: Offline'}
+              </span>
+            </button>
+          </div>
         </div>
       </header>
 

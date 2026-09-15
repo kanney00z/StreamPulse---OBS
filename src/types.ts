@@ -449,3 +449,34 @@ export interface IndoFinityShareEventData {
   shareCount?: number;
 }
 
+export type RealtimeSyncEventType =
+  | 'settings_update'
+  | 'chat_message'
+  | 'gift_alert'
+  | 'follow_alert'
+  | 'share_alert'
+  | 'likes'
+  | 'subathon_add_time'
+  | 'subathon_state'
+  | 'avatar_action'
+  | 'clear_chat'
+  | 'reset_state';
+
+export interface StreamSyncEvent<T = any> {
+  id?: string;
+  type: RealtimeSyncEventType;
+  payload: T;
+  timestamp?: number;
+  source?: string;
+}
+
+export interface RealtimeServerState {
+  settings: Partial<OverlayCustomSettings>;
+  subathonSeconds?: number;
+  subathonIsRunning?: boolean;
+  totalLikes?: number;
+  updatedAt: number;
+}
+
+export type RealtimeSyncStatus = 'connected' | 'connecting' | 'disconnected';
+
