@@ -25,6 +25,7 @@ import { CHAT_THEMES } from '../data/mockData';
 import { SubathonControlCard } from './SubathonControlCard';
 import { StreamAvatarControlCard } from './StreamAvatarControlCard';
 import { ttsService } from '../utils/ttsService';
+import { generateOverlayUrl } from '../utils/overlayUrl';
 
 export type WidgetCategoryKey = 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'subathon' | 'avatars';
 
@@ -486,7 +487,12 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
           {/* 6. OBS Browser Source Link for Chat */}
           <div className="pt-2 border-t border-white/10 space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-cyan-300">ลิงก์ OBS สำหรับกล่องแชท:</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-bold text-cyan-300">ลิงก์ OBS สำหรับกล่องแชท:</span>
+                <span className="text-[10px] text-cyan-200/90 bg-cyan-950/60 px-2 py-0.5 rounded-md border border-cyan-500/30 font-medium">
+                  ธีม: {CHAT_THEMES.find((t) => t.id === settings.chatTheme)?.name || settings.chatTheme}
+                </span>
+              </div>
               <span className="font-mono text-[10px] text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded border border-cyan-400/20">
                 ขนาด: {settings.chatLayout === 'horizontal' ? '1280 × 140 px' : '420 × 650 px'}
               </span>
@@ -509,7 +515,7 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
                 )}
               </button>
               <a
-                href={`${window.location.origin}?mode=overlay&overlay=chat&theme=${settings.chatTheme}&layout=${settings.chatLayout}&timestamp=${settings.chatShowTimestamps ? '1' : '0'}`}
+                href={generateOverlayUrl('chat', settings)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-xl bg-slate-950 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white transition-all flex items-center justify-center cursor-pointer"
@@ -651,7 +657,7 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
                 )}
               </button>
               <a
-                href={`${window.location.origin}?mode=overlay&overlay=leaderboard`}
+                href={generateOverlayUrl('leaderboard', settings)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-xl bg-slate-950 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white transition-all flex items-center justify-center cursor-pointer"
@@ -781,7 +787,7 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
                 )}
               </button>
               <a
-                href={`${window.location.origin}?mode=overlay&overlay=gift`}
+                href={generateOverlayUrl('gift', settings)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-xl bg-slate-950 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white transition-all flex items-center justify-center cursor-pointer"
@@ -900,7 +906,7 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
                 )}
               </button>
               <a
-                href={`${window.location.origin}?mode=overlay&overlay=follow`}
+                href={generateOverlayUrl('follow', settings)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-xl bg-slate-950 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white transition-all flex items-center justify-center cursor-pointer"
@@ -1019,7 +1025,7 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
                 )}
               </button>
               <a
-                href={`${window.location.origin}?mode=overlay&overlay=share`}
+                href={generateOverlayUrl('share', settings)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-xl bg-slate-950 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white transition-all flex items-center justify-center cursor-pointer"

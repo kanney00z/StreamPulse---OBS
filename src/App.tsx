@@ -42,6 +42,7 @@ import {
   IndoFinityConnectionStatus,
   IndoFinityLogItem,
 } from './types';
+import { generateOverlayUrl } from './utils/overlayUrl';
 import {
   INITIAL_CHAT_MESSAGES,
   INITIAL_LIKE_LEADERBOARD,
@@ -85,90 +86,102 @@ export default function App() {
     }
   }, []);
 
-  // Global Overlay Settings State
-  const [settings, setSettings] = useState<OverlayCustomSettings>({
-    chatTheme: 'multistream-pill-dynamic',
-    chatFontSize: 'base',
-    chatAutoHideSeconds: 10,
-    chatShowAvatars: true,
-    chatShowBadges: true,
-    chatShowTimestamps: true,
-    chatLayout: 'vertical',
-    chatDirection: 'down',
-    chatSoundEnabled: true,
-    chatMaxMessages: 12,
+  // Global Overlay Settings State with localStorage persistence
+  const [settings, setSettings] = useState<OverlayCustomSettings>(() => {
+    const defaultSettings: OverlayCustomSettings = {
+      chatTheme: 'multistream-pill-dynamic',
+      chatFontSize: 'base',
+      chatAutoHideSeconds: 10,
+      chatShowAvatars: true,
+      chatShowBadges: true,
+      chatShowTimestamps: true,
+      chatLayout: 'vertical',
+      chatDirection: 'down',
+      chatSoundEnabled: true,
+      chatMaxMessages: 12,
 
-    // TTS (Text-to-Speech อ่านแชทสดอัตโนมัติ ปรับแต่งเสียงได้หลากหลาย)
-    chatTtsEnabled: true,
-    chatTtsFormat: 'nameAndMessage',
-    chatTtsSpeed: 0.86, // จังหวะปกติ ไม่เร็วเกิน ชัดเจน ฟังสบาย เป็นธรรมชาติ
-    chatTtsPitch: 1.05, // โทนเสียงพูดผู้หญิงธรรมชาติ ฟังสบาย
-    chatTtsVolume: 90,
-    chatTtsVoice: 'ai_female_google', // เสียงสาวหวานใส AI รับประกันหญิง 100%
-    chatTtsTonePreset: 'female-natural',
-    chatTtsSkipSpam: true,
-    chatTtsSweetEnding: false,
+      // TTS (Text-to-Speech อ่านแชทสดอัตโนมัติ ปรับแต่งเสียงได้หลากหลาย)
+      chatTtsEnabled: true,
+      chatTtsFormat: 'nameAndMessage',
+      chatTtsSpeed: 0.86,
+      chatTtsPitch: 1.05,
+      chatTtsVolume: 90,
+      chatTtsVoice: 'ai_female_google',
+      chatTtsTonePreset: 'female-natural',
+      chatTtsSkipSpam: true,
+      chatTtsSweetEnding: false,
 
-    likeGoal: 20000,
-    currentLikes: 0,
-    likeStyle: 'podium-card',
-    likeShowGoalBar: true,
-    likeShowTopCount: 5,
-    likeSoundEnabled: true,
+      likeGoal: 20000,
+      currentLikes: 0,
+      likeStyle: 'podium-card',
+      likeShowGoalBar: true,
+      likeShowTopCount: 5,
+      likeSoundEnabled: true,
 
-    giftSoundEnabled: true,
-    giftSoundVolume: 60,
-    giftDuration: 5,
-    giftShowParticles: true,
-    giftMinCoinFilter: 1,
-    giftStyle: 'banner-epic',
+      giftSoundEnabled: true,
+      giftSoundVolume: 60,
+      giftDuration: 5,
+      giftShowParticles: true,
+      giftMinCoinFilter: 1,
+      giftStyle: 'banner-epic',
 
-    // Follow Alert
-    followAlertEnabled: true,
-    followSoundEnabled: true,
-    followTtsEnabled: true,
-    followDuration: 4,
-    followStyle: 'neon-banner',
+      // Follow Alert
+      followAlertEnabled: true,
+      followSoundEnabled: true,
+      followTtsEnabled: true,
+      followDuration: 4,
+      followStyle: 'neon-banner',
 
-    // Share Alert
-    shareAlertEnabled: true,
-    shareSoundEnabled: true,
-    shareTtsEnabled: true,
-    shareDuration: 4,
-    shareStyle: 'neon-banner',
+      // Share Alert
+      shareAlertEnabled: true,
+      shareSoundEnabled: true,
+      shareTtsEnabled: true,
+      shareDuration: 4,
+      shareStyle: 'neon-banner',
 
-    streamFollowCount: 0,
-    streamShareCount: 0,
+      streamFollowCount: 0,
+      streamShareCount: 0,
 
-    // Subathon Timer Settings
-    subathonTheme: 'viper-cyber-pink',
-    subathonFont: 'orbitron',
-    subathonStyle: 'viperuex', // สไตล์ตามคลิปวีดีโอ (หน้าปัดเข็ม เกียร์หมุน หลอดไฟ LED)
-    subathonTitle: 'STARTING SOON',
-    subathonAutoAdd: true,
-    subathonAddPerFollow: 30,
-    subathonAddPerShare: 15,
-    subathonAddPer100Likes: 10,
-    subathonAddPerCoin: 1,
-    subathonMaxCapHours: 12,
-    subathonShowProgressBar: true,
-    subathonSoundEnabled: true,
+      // Subathon Timer Settings
+      subathonTheme: 'viper-cyber-pink',
+      subathonFont: 'orbitron',
+      subathonStyle: 'viperuex',
+      subathonTitle: 'STARTING SOON',
+      subathonAutoAdd: true,
+      subathonAddPerFollow: 30,
+      subathonAddPerShare: 15,
+      subathonAddPer100Likes: 10,
+      subathonAddPerCoin: 1,
+      subathonMaxCapHours: 12,
+      subathonShowProgressBar: true,
+      subathonSoundEnabled: true,
 
-    // Stream Avatars Settings
-    avatarEnabled: true,
-    avatarViewerCount: 8,
-    avatarStyle: 'shiba-squad',
-    avatarSize: 'md',
-    avatarSpeed: 2.5,
-    avatarShowNametags: true,
-    avatarShowChatBubbles: true,
-    avatarShowGiftsReaction: true,
-    avatarShowLikesReaction: true,
-    avatarShowFollowReaction: true,
-    avatarShowShareReaction: true,
-    avatarDynamicPresence: true,
-    avatarFloorStyle: 'transparent',
-    avatarAllowCheer: true,
+      // Stream Avatars Settings
+      avatarEnabled: true,
+      avatarViewerCount: 8,
+      avatarStyle: 'shiba-squad',
+      avatarSize: 'md',
+      avatarSpeed: 2.5,
+      avatarShowNametags: true,
+      avatarShowChatBubbles: true,
+      avatarShowGiftsReaction: true,
+      avatarShowLikesReaction: true,
+      avatarShowFollowReaction: true,
+      avatarShowShareReaction: true,
+      avatarDynamicPresence: true,
+      avatarFloorStyle: 'transparent',
+      avatarAllowCheer: true,
+    };
+
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('stream_overlay_settings');
+        if (saved) {
+          return { ...defaultSettings, ...JSON.parse(saved) };
+        }
+      } catch (e) {}
+    }
+    return defaultSettings;
   });
 
   // Live widgets state (Starts clean with 0 likes and empty leaderboard for new stream)
@@ -795,18 +808,20 @@ export default function App() {
   }, [isAutoSimulating]);
 
   const updateSettings = (partial: Partial<OverlayCustomSettings>) => {
-    setSettings((prev) => ({ ...prev, ...partial }));
+    setSettings((prev) => {
+      const updated = { ...prev, ...partial };
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('stream_overlay_settings', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
     realtimeSync.broadcastSettings(partial);
   };
 
   const copyWidgetUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars') => {
-    const origin = window.location.origin;
-    let url = `${origin}?mode=overlay&overlay=${type}`;
-    if (type === 'subathon') {
-      url = `${origin}?mode=overlay&overlay=subathon&subathontheme=${settings.subathonTheme}&subathonfont=${settings.subathonFont || 'orbitron'}&subathonstyle=${settings.subathonStyle}${settings.subathonStartSeconds ? `&subathonsec=${settings.subathonStartSeconds}` : ''}`;
-    } else if (type === 'avatars') {
-      url = `${origin}?mode=overlay&overlay=avatars&avatarcount=${settings.avatarViewerCount}&avatarstyle=${settings.avatarStyle}&avatarsize=${settings.avatarSize}&avatarfloor=${settings.avatarFloorStyle}&avatarspeed=${settings.avatarSpeed}&avatarnames=${settings.avatarShowNametags ? 1 : 0}&avatarbubbles=${settings.avatarShowChatBubbles ? 1 : 0}`;
-    }
+    const url = generateOverlayUrl(type, settings);
     navigator.clipboard.writeText(url).then(() => {
       setCopiedKey(type);
       setTimeout(() => setCopiedKey(null), 2500);

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { OverlayCustomSettings, ChatThemeId, SubathonThemeId } from '../types';
 import { CHAT_THEMES, SUBATHON_THEMES } from '../data/mockData';
+import { generateOverlayUrl } from '../utils/overlayUrl';
 
 interface OBSLinkHubProps {
   settings: OverlayCustomSettings;
@@ -45,82 +46,7 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   const getOverlayUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all') => {
-    const params = new URLSearchParams();
-    params.set('mode', 'overlay');
-    params.set('overlay', type);
-    params.set('ws', `ws://localhost:${customWsPort.trim() || '62024'}`);
-
-    if (type === 'chat' || type === 'all') {
-      params.set('theme', settings.chatTheme);
-      params.set('autohide', settings.chatAutoHideSeconds.toString());
-      params.set('fontsize', settings.chatFontSize);
-      params.set('avatars', settings.chatShowAvatars ? '1' : '0');
-      if (settings.chatLayout) {
-        params.set('layout', settings.chatLayout);
-      }
-      if (settings.chatShowTimestamps !== undefined) {
-        params.set('timestamp', settings.chatShowTimestamps ? '1' : '0');
-      }
-      if (settings.chatTtsEnabled) {
-        params.set('tts', '1');
-        params.set('ttsformat', settings.chatTtsFormat);
-        params.set('ttsspeed', settings.chatTtsSpeed.toString());
-        params.set('ttspitch', settings.chatTtsPitch.toString());
-        params.set('ttsvol', settings.chatTtsVolume.toString());
-        params.set('ttssweet', settings.chatTtsSweetEnding ? '1' : '0');
-        if (settings.chatTtsVoice) {
-          params.set('ttsvoice', settings.chatTtsVoice);
-        }
-      }
-    }
-
-    if (type === 'leaderboard' || type === 'all') {
-      params.set('style', settings.likeStyle);
-      params.set('goal', settings.likeGoal.toString());
-      params.set('top', settings.likeShowTopCount.toString());
-      params.set('showgoal', settings.likeShowGoalBar ? '1' : '0');
-    }
-
-    if (type === 'gift' || type === 'alerts' || type === 'all') {
-      params.set('duration', settings.giftDuration.toString());
-      params.set('particles', settings.giftShowParticles ? '1' : '0');
-    }
-
-    if (type === 'follow' || type === 'alerts' || type === 'all') {
-      params.set('follow', settings.followAlertEnabled ? '1' : '0');
-      params.set('followtts', settings.followTtsEnabled ? '1' : '0');
-      params.set('followdur', settings.followDuration.toString());
-      params.set('followstyle', settings.followStyle);
-    }
-
-    if (type === 'share' || type === 'alerts' || type === 'all') {
-      params.set('share', settings.shareAlertEnabled ? '1' : '0');
-      params.set('sharetts', settings.shareTtsEnabled ? '1' : '0');
-      params.set('sharedur', settings.shareDuration.toString());
-      params.set('sharestyle', settings.shareStyle);
-    }
-
-    if (type === 'subathon') {
-      params.set('subathontheme', settings.subathonTheme);
-      params.set('subathonstyle', settings.subathonStyle);
-      params.set('subathontitle', settings.subathonTitle);
-      params.set('subathoncap', settings.subathonMaxCapHours.toString());
-      if (settings.subathonStartSeconds) {
-        params.set('subathonsec', settings.subathonStartSeconds.toString());
-      }
-    }
-
-    if (type === 'avatars') {
-      params.set('avatarcount', (settings.avatarViewerCount || 10).toString());
-      params.set('avatarstyle', settings.avatarStyle || 'chibi-pixel');
-      params.set('avatarsize', settings.avatarSize || 'md');
-      params.set('avatarfloor', settings.avatarFloorStyle || 'transparent');
-      params.set('avatarspeed', (settings.avatarSpeed || 2.5).toString());
-      params.set('avatarnames', settings.avatarShowNametags ? '1' : '0');
-      params.set('avatarbubbles', settings.avatarShowChatBubbles ? '1' : '0');
-    }
-
-    return `${origin}?${params.toString()}`;
+    return generateOverlayUrl(type, settings, customWsPort.trim() || '62024');
   };
 
   const copyToClipboard = (text: string, key: string) => {

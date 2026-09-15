@@ -211,9 +211,10 @@ app.post('/api/sync/settings', (req, res) => {
         : raw;
 
     if (incoming && typeof incoming === 'object' && !Array.isArray(incoming)) {
+      const { _source, ...cleanSettings } = incoming;
       currentSyncState.settings = {
         ...currentSyncState.settings,
-        ...incoming,
+        ...cleanSettings,
       };
       currentSyncState.updatedAt = Date.now();
 

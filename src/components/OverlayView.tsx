@@ -43,66 +43,99 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     };
   }, []);
 
-  // Parse URL search params
+  // Check if localStorage has saved settings on this machine
+  let savedLocalSettings: Partial<OverlayCustomSettings> = {};
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('stream_overlay_settings');
+      if (raw) savedLocalSettings = JSON.parse(raw);
+    } catch (e) {}
+  }
+
+  // Parse URL search params (URL query params take priority, then localStorage, then defaults)
   const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-  const rawTheme = urlParams.get('theme');
+  const rawTheme = urlParams.get('theme') || savedLocalSettings.chatTheme;
   const themeParam = ((rawTheme === 'comic-pop-pink' ? 'comic-pop' : rawTheme) as ChatThemeId) || 'multistream-pill-dynamic';
-  const autoHideParam = Number(urlParams.get('autohide') || 10);
-  const fontSizeParam = (urlParams.get('fontsize') as 'sm' | 'base' | 'lg' | 'xl') || 'base';
-  const layoutParam = (urlParams.get('layout') as 'vertical' | 'horizontal') || 'vertical';
-  const showTimestampsParam = urlParams.get('timestamp') !== '0';
-  const styleParam = (urlParams.get('style') as 'podium-card' | 'compact-ticker' | 'glass-list' | 'neon-glow') || 'podium-card';
-  const goalParam = Number(urlParams.get('goal') || 25000);
-  const showGoalParam = urlParams.get('showgoal') !== '0';
-  const durationParam = Number(urlParams.get('duration') || 5);
+  const autoHideParam = urlParams.has('autohide')
+    ? Number(urlParams.get('autohide'))
+    : (savedLocalSettings.chatAutoHideSeconds ?? 10);
+  const fontSizeParam = (urlParams.get('fontsize') as 'sm' | 'base' | 'lg' | 'xl') || savedLocalSettings.chatFontSize || 'base';
+  const layoutParam = (urlParams.get('layout') as 'vertical' | 'horizontal') || savedLocalSettings.chatLayout || 'vertical';
+  const showTimestampsParam = urlParams.has('timestamp')
+    ? urlParams.get('timestamp') !== '0'
+    : (savedLocalSettings.chatShowTimestamps ?? true);
+  const showAvatarsParam = urlParams.has('avatars')
+    ? urlParams.get('avatars') !== '0'
+    : (savedLocalSettings.chatShowAvatars ?? true);
+  const showBadgesParam = urlParams.has('badges')
+    ? urlParams.get('badges') !== '0'
+    : (savedLocalSettings.chatShowBadges ?? true);
+  const soundParam = urlParams.has('sound')
+    ? urlParams.get('sound') !== '0'
+    : (savedLocalSettings.chatSoundEnabled ?? true);
+
+  // Like Leaderboard
+  const styleParam = (urlParams.get('style') as 'podium-card' | 'compact-ticker' | 'glass-list' | 'neon-glow') || savedLocalSettings.likeStyle || 'podium-card';
+  const goalParam = urlParams.has('goal') ? Number(urlParams.get('goal')) : (savedLocalSettings.likeGoal ?? 25000);
+  const showGoalParam = urlParams.has('showgoal') ? urlParams.get('showgoal') !== '0' : (savedLocalSettings.likeShowGoalBar ?? true);
+  const topParam = (urlParams.has('top') ? Number(urlParams.get('top')) : (savedLocalSettings.likeShowTopCount ?? 5)) as 3 | 5 | 10;
+
+  // Gift
+  const durationParam = urlParams.has('duration') ? Number(urlParams.get('duration')) : (savedLocalSettings.giftDuration ?? 5);
+  const giftStyleParam = (urlParams.get('giftstyle') as any) || savedLocalSettings.giftStyle || 'banner-epic';
+  const giftParticlesParam = urlParams.has('particles') ? urlParams.get('particles') !== '0' : (savedLocalSettings.giftShowParticles ?? true);
+  const giftVolParam = urlParams.has('volume') ? Number(urlParams.get('volume')) : (savedLocalSettings.giftSoundVolume ?? 60);
+  const giftMinCoinParam = urlParams.has('mincoin') ? Number(urlParams.get('mincoin')) : (savedLocalSettings.giftMinCoinFilter ?? 1);
   const wsUrlParam = urlParams.get('ws') || 'ws://localhost:62024';
 
   // TTS URL Params
-  const ttsParam = urlParams.get('tts') === '1';
-  const ttsFormatParam = (urlParams.get('ttsformat') as any) || 'nameAndMessage';
-  const ttsSpeedParam = Number(urlParams.get('ttsspeed') || 0.86);
-  const ttsPitchParam = Number(urlParams.get('ttspitch') || 1.05);
-  const ttsVolParam = Number(urlParams.get('ttsvol') || 90);
-  const ttsVoiceParam = urlParams.get('ttsvoice') || 'ai_female_google';
-  const ttsSweetParam = urlParams.get('ttssweet') !== '0';
+  const ttsParam = urlParams.has('tts') ? urlParams.get('tts') === '1' : (savedLocalSettings.chatTtsEnabled ?? false);
+  const ttsFormatParam = (urlParams.get('ttsformat') as any) || savedLocalSettings.chatTtsFormat || 'nameAndMessage';
+  const ttsSpeedParam = urlParams.has('ttsspeed') ? Number(urlParams.get('ttsspeed')) : (savedLocalSettings.chatTtsSpeed ?? 0.86);
+  const ttsPitchParam = urlParams.has('ttspitch') ? Number(urlParams.get('ttspitch')) : (savedLocalSettings.chatTtsPitch ?? 1.05);
+  const ttsVolParam = urlParams.has('ttsvol') ? Number(urlParams.get('ttsvol')) : (savedLocalSettings.chatTtsVolume ?? 90);
+  const ttsVoiceParam = urlParams.get('ttsvoice') || savedLocalSettings.chatTtsVoice || 'ai_female_google';
+  const ttsSweetParam = urlParams.has('ttssweet') ? urlParams.get('ttssweet') !== '0' : (savedLocalSettings.chatTtsSweetEnding ?? true);
 
   // Follow & Share URL Params
-  const followParam = urlParams.get('follow') !== '0';
-  const shareParam = urlParams.get('share') !== '0';
-  const followTtsParam = urlParams.get('followtts') !== '0';
-  const shareTtsParam = urlParams.get('sharetts') !== '0';
-  const followDurParam = Number(urlParams.get('followdur') || 4);
-  const shareDurParam = Number(urlParams.get('sharedur') || 4);
-  const followStyleParam = (urlParams.get('followstyle') as any) || 'neon-banner';
-  const shareStyleParam = (urlParams.get('sharestyle') as any) || 'neon-banner';
+  const followParam = urlParams.has('follow') ? urlParams.get('follow') !== '0' : (savedLocalSettings.followAlertEnabled ?? true);
+  const shareParam = urlParams.has('share') ? urlParams.get('share') !== '0' : (savedLocalSettings.shareAlertEnabled ?? true);
+  const followTtsParam = urlParams.has('followtts') ? urlParams.get('followtts') !== '0' : (savedLocalSettings.followTtsEnabled ?? true);
+  const shareTtsParam = urlParams.has('sharetts') ? urlParams.get('sharetts') !== '0' : (savedLocalSettings.shareTtsEnabled ?? true);
+  const followDurParam = urlParams.has('followdur') ? Number(urlParams.get('followdur')) : (savedLocalSettings.followDuration ?? 4);
+  const shareDurParam = urlParams.has('sharedur') ? Number(urlParams.get('sharedur')) : (savedLocalSettings.shareDuration ?? 4);
+  const followStyleParam = (urlParams.get('followstyle') as any) || savedLocalSettings.followStyle || 'neon-banner';
+  const shareStyleParam = (urlParams.get('sharestyle') as any) || savedLocalSettings.shareStyle || 'neon-banner';
+  const followSoundParam = urlParams.has('followsound') ? urlParams.get('followsound') !== '0' : (savedLocalSettings.followSoundEnabled ?? true);
+  const shareSoundParam = urlParams.has('sharesound') ? urlParams.get('sharesound') !== '0' : (savedLocalSettings.shareSoundEnabled ?? true);
 
   // Subathon URL Params
-  const subathonThemeParam = (urlParams.get('subathontheme') || urlParams.get('theme') || 'cyberpunk-neon') as SubathonThemeId;
-  const subathonFontParam = (urlParams.get('subathonfont') || urlParams.get('font') || 'orbitron') as SubathonFontId;
-  const subathonStyleParam = (urlParams.get('subathonstyle') as 'card' | 'frameless' | 'viperuex') || (String(subathonThemeParam).startsWith('viper-') ? 'viperuex' : 'frameless');
-  const subathonTitleParam = urlParams.get('subathontitle') || 'SUBATHON MARATHON';
-  const subathonSecParam = Number(urlParams.get('subathonsec') || 7200);
-  const subathonCapParam = Number(urlParams.get('subathoncap') || 12);
+  const subathonThemeParam = (urlParams.get('subathontheme') || urlParams.get('theme') || savedLocalSettings.subathonTheme || 'cyberpunk-neon') as SubathonThemeId;
+  const subathonFontParam = (urlParams.get('subathonfont') || urlParams.get('font') || savedLocalSettings.subathonFont || 'orbitron') as SubathonFontId;
+  const subathonStyleParam = (urlParams.get('subathonstyle') as 'card' | 'frameless' | 'viperuex') || savedLocalSettings.subathonStyle || (String(subathonThemeParam).startsWith('viper-') ? 'viperuex' : 'frameless');
+  const subathonTitleParam = urlParams.get('subathontitle') || savedLocalSettings.subathonTitle || 'SUBATHON MARATHON';
+  const subathonSecParam = urlParams.has('subathonsec') ? Number(urlParams.get('subathonsec')) : (savedLocalSettings.subathonStartSeconds ?? 7200);
+  const subathonCapParam = urlParams.has('subathoncap') ? Number(urlParams.get('subathoncap')) : (savedLocalSettings.subathonMaxCapHours ?? 12);
 
   // Stream Avatars URL Params
-  const avatarCountParam = Number(urlParams.get('avatarcount') || 10);
-  const avatarStyleParam = (urlParams.get('avatarstyle') as any) || 'shiba-squad';
-  const avatarSizeParam = (urlParams.get('avatarsize') as any) || 'md';
-  const avatarFloorParam = (urlParams.get('avatarfloor') as any) || 'transparent';
-  const avatarSpeedParam = Number(urlParams.get('avatarspeed') || 2.5);
-  const avatarNamesParam = urlParams.get('avatarnames') !== '0';
-  const avatarBubblesParam = urlParams.get('avatarbubbles') !== '0';
+  const avatarCountParam = urlParams.has('avatarcount') ? Number(urlParams.get('avatarcount')) : (savedLocalSettings.avatarViewerCount ?? 10);
+  const avatarStyleParam = (urlParams.get('avatarstyle') as any) || savedLocalSettings.avatarStyle || 'shiba-squad';
+  const avatarSizeParam = (urlParams.get('avatarsize') as any) || savedLocalSettings.avatarSize || 'md';
+  const avatarFloorParam = (urlParams.get('avatarfloor') as any) || savedLocalSettings.avatarFloorStyle || 'transparent';
+  const avatarSpeedParam = urlParams.has('avatarspeed') ? Number(urlParams.get('avatarspeed')) : (savedLocalSettings.avatarSpeed ?? 2.5);
+  const avatarNamesParam = urlParams.has('avatarnames') ? urlParams.get('avatarnames') !== '0' : (savedLocalSettings.avatarShowNametags ?? true);
+  const avatarBubblesParam = urlParams.has('avatarbubbles') ? urlParams.get('avatarbubbles') !== '0' : (savedLocalSettings.avatarShowChatBubbles ?? true);
 
   const [settings, setSettings] = useState<OverlayCustomSettings>({
     chatTheme: themeParam,
     chatFontSize: fontSizeParam,
     chatAutoHideSeconds: autoHideParam,
-    chatShowAvatars: true,
-    chatShowBadges: true,
+    chatShowAvatars: showAvatarsParam,
+    chatShowBadges: showBadgesParam,
     chatShowTimestamps: showTimestampsParam,
     chatLayout: layoutParam,
     chatDirection: 'down',
-    chatSoundEnabled: true,
+    chatSoundEnabled: soundParam,
     chatMaxMessages: 15,
 
     // TTS (เสียงไทยหวานใส)
@@ -120,26 +153,26 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     currentLikes: 0,
     likeStyle: styleParam,
     likeShowGoalBar: showGoalParam,
-    likeShowTopCount: 5,
+    likeShowTopCount: topParam,
     likeSoundEnabled: true,
 
     giftSoundEnabled: true,
-    giftSoundVolume: 60,
+    giftSoundVolume: giftVolParam,
     giftDuration: durationParam,
-    giftShowParticles: true,
-    giftMinCoinFilter: 1,
-    giftStyle: 'banner-epic',
+    giftShowParticles: giftParticlesParam,
+    giftMinCoinFilter: giftMinCoinParam,
+    giftStyle: giftStyleParam,
 
     // Follow Alert
     followAlertEnabled: followParam,
-    followSoundEnabled: true,
+    followSoundEnabled: followSoundParam,
     followTtsEnabled: followTtsParam,
     followDuration: followDurParam,
     followStyle: followStyleParam,
 
     // Share Alert
     shareAlertEnabled: shareParam,
-    shareSoundEnabled: true,
+    shareSoundEnabled: shareSoundParam,
     shareTtsEnabled: shareTtsParam,
     shareDuration: shareDurParam,
     shareStyle: shareStyleParam,
@@ -366,7 +399,13 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
       clientType: 'obs',
       onInit: (state) => {
         if (state.settings && Object.keys(state.settings).length > 0) {
-          setSettings((prev) => ({ ...prev, ...state.settings }));
+          setSettings((prev) => {
+            const merged = { ...prev, ...state.settings };
+            try {
+              localStorage.setItem('stream_overlay_settings', JSON.stringify(merged));
+            } catch (e) {}
+            return merged;
+          });
         }
         if (typeof state.subathonSeconds === 'number') {
           setSubathonSeconds(state.subathonSeconds);
@@ -379,7 +418,13 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
         }
       },
       onSettingsUpdate: (newSettings) => {
-        setSettings((prev) => ({ ...prev, ...newSettings }));
+        setSettings((prev) => {
+          const merged = { ...prev, ...newSettings };
+          try {
+            localStorage.setItem('stream_overlay_settings', JSON.stringify(merged));
+          } catch (e) {}
+          return merged;
+        });
       },
       onStreamEvent: (event) => {
         const curSettings = settingsRef.current;
