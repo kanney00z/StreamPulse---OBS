@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { ChatMessage, ChatThemeConfig, OverlayCustomSettings } from '../types';
 import { CHAT_THEMES } from '../data/mockData';
+import { MultistreamChatCard } from './MultistreamChatCard';
 
 interface ChatOverlayWidgetProps {
   messages: ChatMessage[];
@@ -341,9 +342,34 @@ export const ChatOverlayWidget: React.FC<ChatOverlayWidgetProps> = ({
       >
         <AnimatePresence initial={false}>
           {visibleMessages.map((msg) => {
+            const isMultistream = !!activeTheme.isMultistream;
             const isTwitch = !!activeTheme.isTwitchGlow;
             const isComic = !!activeTheme.isComic;
             const comicCfg = activeTheme.comicConfig;
+
+            // 0. MULTISTREAM FLOATING PILL CHAT (100% Matching Reference Video)
+            if (isMultistream) {
+              const forced =
+                activeTheme.multistreamVariant === 'twitch'
+                  ? 'twitch'
+                  : activeTheme.multistreamVariant === 'kick'
+                  ? 'kick'
+                  : activeTheme.multistreamVariant === 'tiktok'
+                  ? 'tiktok'
+                  : activeTheme.multistreamVariant === 'youtube'
+                  ? 'youtube'
+                  : undefined;
+
+              return (
+                <MultistreamChatCard
+                  key={msg.id}
+                  msg={msg}
+                  settings={settings}
+                  compact={activeTheme.multistreamVariant === 'compact'}
+                  forcedPlatform={forced}
+                />
+              );
+            }
 
             // 1. EVENT PILL (Resub, Redeem, Cheer Bits, Follow) like in the video
             if (msg.isEvent) {

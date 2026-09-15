@@ -97,6 +97,12 @@ export interface SubathonTimeAddedEvent {
 }
 
 export type ChatThemeId =
+  | 'multistream-pill-dynamic'
+  | 'multistream-compact-pill'
+  | 'multistream-twitch-purple'
+  | 'multistream-kick-green'
+  | 'multistream-tiktok-cyan'
+  | 'multistream-youtube-red'
   | 'twitch-glow-dynamic'
   | 'twitch-glow-purple'
   | 'twitch-glow-green'
@@ -165,10 +171,15 @@ export interface ChatMessage {
   roleType?: 'streamer' | 'queen' | 'mod' | 'vip' | 'sub' | 'coder' | 'memer' | 'viewer';
   rightIcon?: 'crown' | 'diamond' | 'shield' | 'star' | 'flower' | 'sparkle' | 'heart' | 'pepe';
   isEvent?: boolean;
-  eventType?: 'resub' | 'redeem' | 'cheer' | 'follow';
+  eventType?: 'resub' | 'redeem' | 'cheer' | 'follow' | 'tip';
   eventText?: string;
   eventIcon?: string;
   eventColor?: string;
+  platform?: 'twitch' | 'youtube' | 'kick' | 'tiktok' | 'multistream';
+  emotes?: string[];
+  tipAmount?: string;
+  avatarRingColor?: string;
+  headerColor?: string;
 }
 
 export interface ChatThemeConfig {
@@ -188,7 +199,9 @@ export interface ChatThemeConfig {
   comicConfig?: ComicStickerConfig;
   isTwitchGlow?: boolean;
   twitchGlowVariant?: 'dynamic' | 'purple' | 'green' | 'pink' | 'cyan' | 'gold' | 'red';
-  category?: 'twitch' | '3d' | 'modern' | 'gaming' | 'cute' | 'comic';
+  isMultistream?: boolean;
+  multistreamVariant?: 'dynamic' | 'compact' | 'twitch' | 'kick' | 'tiktok' | 'youtube';
+  category?: 'multistream' | 'twitch' | '3d' | 'modern' | 'gaming' | 'cute' | 'comic';
 }
 
 export interface LikeUser {
@@ -323,6 +336,51 @@ export interface OverlayCustomSettings {
   subathonMaxCapHours: number; // 0 = unlimited, or 6, 12, 24
   subathonShowProgressBar: boolean;
   subathonSoundEnabled: boolean;
+
+  // Stream Avatars (ตัวละครเดินได้ตามจำนวนคนดู)
+  avatarEnabled: boolean;
+  avatarViewerCount: number; // จำนวนผู้ชมที่กำลังดูอยู่ (0 = ไม่มีคนดู ตัวละครหายหมด, 1-30 คนเดิน)
+  avatarStyle: 'shiba-squad' | 'cute-animals' | 'chibi-pixel' | 'kawaii-slimes' | 'cyber-mecha';
+  avatarSize: 'sm' | 'md' | 'lg';
+  avatarSpeed: number; // 1 - 5 (เดินช้า ปานกลาง ไว)
+  avatarShowNametags: boolean;
+  avatarShowChatBubbles: boolean;
+  avatarShowGiftsReaction: boolean;
+  avatarShowLikesReaction: boolean;
+  avatarShowFollowReaction: boolean; // คนกดติดตาม -> มีตัวละครปรากฏตัว/ฉลอง
+  avatarShowShareReaction: boolean; // คนกดแชร์ -> มีตัวละครปรากฏตัว/ฉลอง
+  avatarDynamicPresence: boolean; // จำลองคนดูเข้า-ออกเรียลไทม์ (คนเข้า = เดิน, ไม่มีคน = หายไป)
+  avatarFloorStyle: 'transparent' | 'neon-line' | 'grass-platform' | 'cyber-grid';
+  avatarAllowCheer: boolean;
+}
+
+export type StreamAvatarAction = 'walk' | 'idle' | 'jump' | 'cheer' | 'dance' | 'sleep' | 'wave' | 'leave';
+
+export interface StreamAvatarEntity {
+  id: string;
+  name: string;
+  color: string;
+  spriteIndex: number;
+  x: number; // 0 to 100 percentage
+  targetX: number;
+  vx: number;
+  vy?: number;
+  direction: 'left' | 'right';
+  action: StreamAvatarAction;
+  actionTimer: number;
+  yOffset: number;
+  stepPhase?: number;
+  speedScale?: number;
+  speechBubble?: {
+    text: string;
+    timestamp: number;
+  };
+  celebrating?: boolean;
+  badge?: 'VIP' | 'MOD' | 'SUB' | 'FAN' | 'TOP' | 'FOLLOW' | 'SHARE';
+  isLeaving?: boolean;
+  isSpawning?: boolean;
+  opacity?: number;
+  isSpecialEvent?: 'follow' | 'share' | 'join';
 }
 
 export type IndoFinityConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';

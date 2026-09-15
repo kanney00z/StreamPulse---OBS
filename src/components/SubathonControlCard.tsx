@@ -295,14 +295,14 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
                 title="คลิกเปลี่ยนฟอนต์ 3D"
               >
                 <Type className="w-2.5 h-2.5 text-indigo-300" />
-                <span>{currentSelectedFont.name}</span>
+                <span>{currentSelectedFont?.name || 'Orbitron'}</span>
               </button>
             </div>
 
             <div
               style={{
-                fontFamily: currentSelectedFont.fontFamily,
-                letterSpacing: currentSelectedFont.letterSpacing || 'normal',
+                fontFamily: currentSelectedFont?.fontFamily || 'monospace',
+                letterSpacing: currentSelectedFont?.letterSpacing || 'normal',
               }}
               className="text-3xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400 mt-0.5"
             >
@@ -889,10 +889,10 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/10 text-slate-300 font-mono">
-                  ธีม: {currentThemeConfig.name}
+                  ธีม: {currentThemeConfig?.name || 'Viper Cyber Pink'}
                 </span>
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/25 text-indigo-300 font-bold border border-indigo-400/40">
-                  {currentSelectedFont.badge}
+                  {currentSelectedFont?.badge || 'FONT'}
                 </span>
               </div>
             </div>
@@ -901,18 +901,18 @@ export const SubathonControlCard: React.FC<SubathonControlCardProps> = ({
             <div className="py-2 px-3 rounded-xl bg-black/40 border border-white/5 flex items-center justify-center">
               <div
                 style={{
-                  fontFamily: currentSelectedFont.fontFamily,
-                  letterSpacing: currentSelectedFont.letterSpacing || 'normal',
+                  fontFamily: currentSelectedFont?.fontFamily || 'monospace',
+                  letterSpacing: currentSelectedFont?.letterSpacing || 'normal',
                 }}
-                className={`text-3xl sm:text-4xl font-black ${currentThemeConfig.timerDigitClass} drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]`}
+                className={`text-3xl sm:text-4xl font-black ${currentThemeConfig?.timerDigitClass || ''} drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]`}
               >
                 {pad(hours)}:{pad(minutes)}:{pad(secs)}
               </div>
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-              <span className="text-white font-bold">{currentSelectedFont.name}</span>
-              <span className="text-slate-400 truncate max-w-[240px] text-[10px]">{currentSelectedFont.description}</span>
+              <span className="text-white font-bold">{currentSelectedFont?.name || 'Orbitron'}</span>
+              <span className="text-slate-400 truncate max-w-[240px] text-[10px]">{currentSelectedFont?.description || ''}</span>
             </div>
           </div>
 

@@ -14,6 +14,7 @@ import {
   UserPlus,
   Share2,
   RotateCcw,
+  Users,
 } from 'lucide-react';
 import { GIFT_ITEMS, SIMULATION_NAMES, RANDOM_CHAT_PHRASES } from '../data/mockData';
 import { GiftItem } from '../types';
@@ -22,12 +23,32 @@ interface StreamSimulatorDeckProps {
   onAddLikes: (count: number) => void;
   onResetLikes?: () => void;
   totalLikes?: number;
-  onSendChat: (customText?: string, rolePreset?: 'queen' | 'mod' | 'vip' | 'sub' | 'coder' | 'memer' | 'event') => void;
+  onSendChat: (
+    customText?: string,
+    rolePreset?:
+      | 'queen'
+      | 'mod'
+      | 'vip'
+      | 'sub'
+      | 'coder'
+      | 'memer'
+      | 'event'
+      | 'twitch'
+      | 'kick'
+      | 'tiktok'
+      | 'youtube'
+      | 'stickers'
+      | 'tip'
+  ) => void;
   onSendGift: (gift: GiftItem, combo?: number) => void;
   onSendFollow?: (username?: string) => void;
   onSendShare?: (username?: string) => void;
   streamFollowCount?: number;
   streamShareCount?: number;
+  avatarViewerCount?: number;
+  onUpdateViewerCount?: (count: number) => void;
+  onTriggerAvatarJump?: () => void;
+  onTriggerAvatarCheer?: () => void;
   isAutoSimulating: boolean;
   onToggleAutoSim: () => void;
   soundEnabled: boolean;
@@ -47,6 +68,10 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
   onSendShare,
   streamFollowCount = 0,
   streamShareCount = 0,
+  avatarViewerCount = 8,
+  onUpdateViewerCount,
+  onTriggerAvatarJump,
+  onTriggerAvatarCheer,
   isAutoSimulating,
   onToggleAutoSim,
   soundEnabled,
@@ -157,8 +182,8 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
         </div>
       </div>
 
-      {/* 4 Action Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 5 Action Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {/* 1. Like Controls */}
         <div className="bg-slate-950/70 border border-white/10 rounded-2xl p-4 flex flex-col justify-between">
           <div>
@@ -273,10 +298,70 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
               )}
             </div>
 
-            {/* Quick Twitch Role & Event Tester (ตามคลิป) */}
+            {/* Quick Multistream Video Presets */}
             <div className="pt-1.5 border-t border-white/10 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-fuchsia-300 font-bold uppercase tracking-wider block">
+                  🌐 Multistream (ตามคลิปวิดีโอ 100%):
+                </span>
+                <span className="text-[9px] text-fuchsia-400/80 font-mono">Twitch/Kick/TikTok/YT</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                <button
+                  type="button"
+                  onClick={() => onSendChat(undefined, 'twitch')}
+                  className="py-1 px-1 rounded-lg bg-fuchsia-500/20 hover:bg-fuchsia-500/30 border border-fuchsia-500/40 text-fuchsia-200 text-[10px] font-bold text-center transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center gap-1"
+                  title="Shapiadsr (Twitch Magenta Capsule)"
+                >
+                  🟣 Twitch
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSendChat(undefined, 'kick')}
+                  className="py-1 px-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold text-center transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center gap-1"
+                  title="KickViewer (Kick Green K)"
+                >
+                  🟢 Kick
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSendChat(undefined, 'tiktok')}
+                  className="py-1 px-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-200 text-[10px] font-bold text-center transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center gap-1"
+                  title="Olive (TikTok Cyan Note)"
+                >
+                  🎵 TikTok
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSendChat(undefined, 'youtube')}
+                  className="py-1 px-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-200 text-[10px] font-bold text-center transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center gap-1"
+                  title="Emely (YouTube Rose Play)"
+                >
+                  🔴 YouTube
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSendChat(undefined, 'stickers')}
+                  className="py-1 px-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-200 text-[10px] font-bold text-center transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center gap-1"
+                  title="SpacelabsGaming (Animated Dog + Anime Cheer Stickers)"
+                >
+                  🐶 Stickers
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSendChat(undefined, 'tip')}
+                  className="py-1 px-1 rounded-lg bg-pink-500/25 hover:bg-pink-500/35 border border-pink-500/50 text-pink-200 text-[10px] font-black text-center transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center gap-1 animate-pulse"
+                  title="nelly (Tipped $16 Event)"
+                >
+                  💖 $16 Tip
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Twitch Role & Event Tester (ตามคลิป) */}
+            <div className="pt-1 border-t border-white/10 space-y-1">
               <span className="text-[10px] text-purple-300/80 font-bold uppercase tracking-wider block">
-                ทดสอบ Role & Event ตามคลิป:
+                บทบาทอื่น ๆ (Roles & Badges):
               </span>
               <div className="grid grid-cols-4 gap-1">
                 <button
@@ -403,6 +488,79 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
                 <span className="w-2 h-2 rounded-full bg-teal-400" />
                 แชร์: <strong className="text-teal-300 font-bold">{streamShareCount}</strong>
               </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Stream Avatars Controls */}
+        <div className="bg-slate-950/70 border border-pink-500/20 rounded-2xl p-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-pink-400 flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-pink-400" />
+                5. Stream Avatars
+              </span>
+              <span className="text-[10px] bg-pink-500/15 text-pink-300 px-2 py-0.5 rounded-full border border-pink-500/30 font-bold animate-pulse">
+                {avatarViewerCount} คนดู
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mb-2">
+              ตัวละครคนดูเดินขอบล่างจอ ปรับจำนวนคนดู และสั่งแอ็กชัน
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => onUpdateViewerCount && onUpdateViewerCount(0)}
+                className={`py-1.5 px-1.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer shadow-sm ${
+                  avatarViewerCount === 0
+                    ? 'bg-rose-500/30 border-rose-400 text-rose-200'
+                    : 'bg-slate-900 border-rose-500/30 hover:border-rose-400 text-rose-300'
+                }`}
+                title="ตั้งเป็น 0 คนดู เพื่อดูตัวละครเดินออกจากจอและหายไป"
+              >
+                <span>0 คนดู</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onUpdateViewerCount && onUpdateViewerCount(Math.min(30, (avatarViewerCount || 0) + 1))}
+                className="py-1.5 px-1.5 rounded-xl bg-pink-600/20 border border-pink-500/40 hover:border-pink-400 hover:bg-pink-500/30 text-pink-200 text-xs font-bold transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer shadow-sm"
+                title="เพิ่มตัวละครคนดู 1 คน"
+              >
+                <span>+1 คนดู</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onUpdateViewerCount && onUpdateViewerCount(Math.min(30, (avatarViewerCount || 0) + 5))}
+                className="py-1.5 px-1.5 rounded-xl bg-purple-600/20 border border-purple-500/40 hover:border-purple-400 hover:bg-purple-500/30 text-purple-200 text-xs font-bold transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer shadow-sm"
+                title="เพิ่มตัวละครคนดู 5 คน"
+              >
+                <span>+5 คนดู</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={onTriggerAvatarJump}
+                className="py-1.5 px-2 rounded-xl bg-slate-900 border border-white/10 hover:border-cyan-400 hover:bg-cyan-500/10 text-cyan-300 text-[11px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer"
+                title="สั่งให้ตัวละครกระโดด"
+              >
+                <span>🦘 กระโดด</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onTriggerAvatarCheer}
+                className="py-1.5 px-2 rounded-xl bg-slate-900 border border-white/10 hover:border-pink-400 hover:bg-pink-500/10 text-pink-300 text-[11px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer"
+                title="สั่งให้ตัวละครเต้นและดีใจ"
+              >
+                <span>💃 เต้นดีใจ</span>
+              </button>
             </div>
           </div>
         </div>

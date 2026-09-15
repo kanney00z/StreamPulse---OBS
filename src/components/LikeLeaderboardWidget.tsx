@@ -166,8 +166,8 @@ export const LikeLeaderboardWidget: React.FC<LikeLeaderboardWidgetProps> = ({
               <div className="flex-1 flex flex-col items-center">
                 <div className="relative mb-1">
                   <img
-                    src={topUsers[1].avatar}
-                    alt={topUsers[1].name}
+                    src={topUsers[1]?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=80'}
+                    alt={topUsers[1]?.name || 'อันดับ 2'}
                     referrerPolicy="no-referrer"
                     className="w-11 h-11 rounded-full object-cover border-2 border-slate-300 shadow-md"
                   />
@@ -176,10 +176,10 @@ export const LikeLeaderboardWidget: React.FC<LikeLeaderboardWidgetProps> = ({
                   </span>
                 </div>
                 <span className="text-xs font-semibold text-neutral-200 truncate w-full text-center">
-                  {topUsers[1].name.split(' ')[0]}
+                  {(topUsers[1]?.name || 'อันดับ 2').split(' ')[0]}
                 </span>
                 <span className="text-[11px] font-bold text-slate-300">
-                  {topUsers[1].likeCount.toLocaleString()}
+                  {(topUsers[1]?.likeCount || 0).toLocaleString()}
                 </span>
                 <div className="w-full h-9 mt-1 rounded-t-lg bg-gradient-to-t from-slate-800 to-slate-700/80 flex items-center justify-center text-[10px] font-bold text-slate-300">
                   2ND
@@ -191,8 +191,8 @@ export const LikeLeaderboardWidget: React.FC<LikeLeaderboardWidgetProps> = ({
                 <Crown className="w-5 h-5 text-amber-400 fill-amber-400 animate-bounce mb-0.5" />
                 <div className="relative mb-1">
                   <img
-                    src={topUsers[0].avatar}
-                    alt={topUsers[0].name}
+                    src={topUsers[0]?.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80'}
+                    alt={topUsers[0]?.name || 'อันดับ 1'}
                     referrerPolicy="no-referrer"
                     className="w-14 h-14 rounded-full object-cover border-2 border-amber-400 shadow-[0_0_14px_rgba(251,191,36,0.6)] ring-2 ring-amber-400/30"
                   />
@@ -201,10 +201,10 @@ export const LikeLeaderboardWidget: React.FC<LikeLeaderboardWidgetProps> = ({
                   </span>
                 </div>
                 <span className="text-xs font-bold text-amber-300 truncate w-full text-center">
-                  {topUsers[0].name.split(' ')[0]}
+                  {(topUsers[0]?.name || 'อันดับ 1').split(' ')[0]}
                 </span>
                 <span className="text-[11px] font-black text-amber-400">
-                  {topUsers[0].likeCount.toLocaleString()}
+                  {(topUsers[0]?.likeCount || 0).toLocaleString()}
                 </span>
                 <div className="w-full h-14 mt-1 rounded-t-lg bg-gradient-to-t from-amber-600/70 to-yellow-500/80 flex items-center justify-center text-[10px] font-black text-neutral-950 shadow-md">
                   👑 1ST
@@ -215,8 +215,8 @@ export const LikeLeaderboardWidget: React.FC<LikeLeaderboardWidgetProps> = ({
               <div className="flex-1 flex flex-col items-center">
                 <div className="relative mb-1">
                   <img
-                    src={topUsers[2].avatar}
-                    alt={topUsers[2].name}
+                    src={topUsers[2]?.avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80'}
+                    alt={topUsers[2]?.name || 'อันดับ 3'}
                     referrerPolicy="no-referrer"
                     className="w-11 h-11 rounded-full object-cover border-2 border-amber-700 shadow-md"
                   />
@@ -225,10 +225,10 @@ export const LikeLeaderboardWidget: React.FC<LikeLeaderboardWidgetProps> = ({
                   </span>
                 </div>
                 <span className="text-xs font-semibold text-neutral-200 truncate w-full text-center">
-                  {topUsers[2].name.split(' ')[0]}
+                  {(topUsers[2]?.name || 'อันดับ 3').split(' ')[0]}
                 </span>
                 <span className="text-[11px] font-bold text-amber-500">
-                  {topUsers[2].likeCount.toLocaleString()}
+                  {(topUsers[2]?.likeCount || 0).toLocaleString()}
                 </span>
                 <div className="w-full h-7 mt-1 rounded-t-lg bg-gradient-to-t from-amber-950 to-amber-900/80 flex items-center justify-center text-[10px] font-bold text-amber-300">
                   3RD
@@ -260,11 +260,11 @@ export const LikeLeaderboardWidget: React.FC<LikeLeaderboardWidgetProps> = ({
                   {rankBadge(user.rank)}
                   <img
                     src={user.avatar}
-                    alt={user.name}
+                    alt={user.name || 'User'}
                     referrerPolicy="no-referrer"
                     className="w-7 h-7 rounded-full object-cover border border-white/20 shrink-0"
                   />
-                  <span className="text-xs font-medium text-neutral-100 truncate">{user.name}</span>
+                  <span className="text-xs font-medium text-neutral-100 truncate">{user.name || 'ผู้ชม'}</span>
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">

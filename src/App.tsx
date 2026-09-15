@@ -27,6 +27,7 @@ import {
   Share2,
   RotateCcw,
   Timer,
+  Users,
 } from 'lucide-react';
 import {
   ChatMessage,
@@ -55,6 +56,7 @@ import { GiftOverlayWidget } from './components/GiftOverlayWidget';
 import { FollowShareOverlayWidget } from './components/FollowShareOverlayWidget';
 import { SubathonTimerWidget } from './components/SubathonTimerWidget';
 import { SubathonControlCard } from './components/SubathonControlCard';
+import { StreamAvatarsOverlay } from './components/StreamAvatarsOverlay';
 import { StreamSimulatorDeck } from './components/StreamSimulatorDeck';
 import { OBSLinkHub } from './components/OBSLinkHub';
 import { ThemeSelector } from './components/ThemeSelector';
@@ -69,12 +71,12 @@ import { ttsService } from './utils/ttsService';
 export default function App() {
   // Check if opened as standalone OBS Browser Source overlay
   const [isOverlayMode, setIsOverlayMode] = useState(false);
-  const [overlayType, setOverlayType] = useState<'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'all'>('all');
+  const [overlayType, setOverlayType] = useState<'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all'>('all');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const mode = params.get('mode');
-    const overlay = params.get('overlay') as 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'all';
+    const overlay = params.get('overlay') as 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all';
 
     if (mode === 'overlay' || overlay) {
       setIsOverlayMode(true);
@@ -84,7 +86,7 @@ export default function App() {
 
   // Global Overlay Settings State
   const [settings, setSettings] = useState<OverlayCustomSettings>({
-    chatTheme: 'twitch-glow-dynamic',
+    chatTheme: 'multistream-pill-dynamic',
     chatFontSize: 'base',
     chatAutoHideSeconds: 10,
     chatShowAvatars: true,
@@ -150,6 +152,22 @@ export default function App() {
     subathonMaxCapHours: 12,
     subathonShowProgressBar: true,
     subathonSoundEnabled: true,
+
+    // Stream Avatars Settings
+    avatarEnabled: true,
+    avatarViewerCount: 8,
+    avatarStyle: 'shiba-squad',
+    avatarSize: 'md',
+    avatarSpeed: 2.5,
+    avatarShowNametags: true,
+    avatarShowChatBubbles: true,
+    avatarShowGiftsReaction: true,
+    avatarShowLikesReaction: true,
+    avatarShowFollowReaction: true,
+    avatarShowShareReaction: true,
+    avatarDynamicPresence: true,
+    avatarFloorStyle: 'transparent',
+    avatarAllowCheer: true,
   });
 
   // Live widgets state (Starts clean with 0 likes and empty leaderboard for new stream)
@@ -168,7 +186,7 @@ export default function App() {
 
   // Studio UI state
   const [activeTab, setActiveTab] = useState<'studio' | 'themes' | 'links' | 'indofinity'>('studio');
-  const [activeWidgetView, setActiveWidgetView] = useState<'all' | 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon'>('all');
+  const [activeWidgetView, setActiveWidgetView] = useState<'all' | 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars'>('all');
   const [canvasAspect, setCanvasAspect] = useState<'16:9' | '9:16'>('16:9');
   const [canvasBg, setCanvasBg] = useState<'gaming' | 'lofi' | 'dark' | 'transparent'>('gaming');
   const [isAutoSimulating, setIsAutoSimulating] = useState(false);
@@ -325,8 +343,132 @@ export default function App() {
   };
 
   // Action: Send Chat
-  const handleSendChat = (customText?: string, rolePreset?: 'queen' | 'mod' | 'vip' | 'sub' | 'coder' | 'memer' | 'event') => {
+  const handleSendChat = (
+    customText?: string,
+    rolePreset?:
+      | 'queen'
+      | 'mod'
+      | 'vip'
+      | 'sub'
+      | 'coder'
+      | 'memer'
+      | 'event'
+      | 'twitch'
+      | 'kick'
+      | 'tiktok'
+      | 'youtube'
+      | 'stickers'
+      | 'tip'
+  ) => {
     sounds.playChat();
+
+    // 1. Multistream video exact presets
+    if (rolePreset === 'twitch') {
+      const msg: ChatMessage = {
+        id: 'chat-' + Date.now(),
+        username: 'Shapiadsr',
+        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+        message: 'Welcome to the multistream! Drop a follow.',
+        timestamp: Date.now(),
+        platform: 'twitch',
+        roleTag: 'TWITCH',
+        roleColor: '#d946ef',
+        badges: ['verified'],
+        color: '#f472b6',
+      };
+      setMessages((prev) => [...prev, msg]);
+      if (settingsRef.current.chatTtsEnabled) ttsService.speakChat(msg.username, msg.message);
+      return;
+    }
+
+    if (rolePreset === 'kick') {
+      const msg: ChatMessage = {
+        id: 'chat-' + Date.now(),
+        username: 'KickViewer',
+        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+        message: 'this is a kick message !!',
+        timestamp: Date.now(),
+        platform: 'kick',
+        roleTag: 'KICK',
+        roleColor: '#22c55e',
+        color: '#4ade80',
+      };
+      setMessages((prev) => [...prev, msg]);
+      if (settingsRef.current.chatTtsEnabled) ttsService.speakChat(msg.username, msg.message);
+      return;
+    }
+
+    if (rolePreset === 'tiktok') {
+      const msg: ChatMessage = {
+        id: 'chat-' + Date.now(),
+        username: 'Olive',
+        avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
+        message: 'this is a tiktok message this is a tiktok message !! this is a tiktok message !!',
+        timestamp: Date.now(),
+        platform: 'tiktok',
+        roleTag: 'TIKTOK',
+        roleColor: '#06b6d4',
+        badges: ['top_fan'],
+        color: '#22d3ee',
+      };
+      setMessages((prev) => [...prev, msg]);
+      if (settingsRef.current.chatTtsEnabled) ttsService.speakChat(msg.username, msg.message);
+      return;
+    }
+
+    if (rolePreset === 'youtube') {
+      const msg: ChatMessage = {
+        id: 'chat-' + Date.now(),
+        username: 'Emely',
+        avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&auto=format&fit=crop&q=80',
+        message: 'Loving the stream from YouTube!',
+        timestamp: Date.now(),
+        platform: 'youtube',
+        roleTag: 'YOUTUBE',
+        roleColor: '#f43f5e',
+        badges: ['sub'],
+        color: '#f43f5e',
+      };
+      setMessages((prev) => [...prev, msg]);
+      if (settingsRef.current.chatTtsEnabled) ttsService.speakChat(msg.username, msg.message);
+      return;
+    }
+
+    if (rolePreset === 'stickers') {
+      const msg: ChatMessage = {
+        id: 'chat-' + Date.now(),
+        username: 'SpacelabsGaming',
+        avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=120&auto=format&fit=crop&q=80',
+        message: '🐶✨',
+        timestamp: Date.now(),
+        platform: 'youtube',
+        roleTag: 'GAMER',
+        roleColor: '#0ea5e9',
+        emotes: ['shiba', 'cheer'],
+        color: '#38bdf8',
+      };
+      setMessages((prev) => [...prev, msg]);
+      return;
+    }
+
+    if (rolePreset === 'tip') {
+      const msg: ChatMessage = {
+        id: 'chat-' + Date.now(),
+        username: 'nelly',
+        avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=120&auto=format&fit=crop&q=80',
+        message: 'Now Tipped $16!',
+        timestamp: Date.now(),
+        platform: 'multistream',
+        isEvent: true,
+        eventType: 'tip',
+        tipAmount: '$16!',
+        eventText: 'nelly Now Tipped $16!',
+        color: '#ec4899',
+      };
+      setMessages((prev) => [...prev, msg]);
+      if (settingsRef.current.chatTtsEnabled) ttsService.speakChat(msg.username, 'nelly ทิป $16');
+      return;
+    }
 
     if (rolePreset === 'event') {
       const eventTypes: ('resub' | 'redeem' | 'cheer' | 'follow')[] = ['resub', 'redeem', 'cheer', 'follow'];
@@ -582,11 +724,14 @@ export default function App() {
     setSettings((prev) => ({ ...prev, ...partial }));
   };
 
-  const copyWidgetUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon') => {
+  const copyWidgetUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars') => {
     const origin = window.location.origin;
-    const url = type === 'subathon'
-      ? `${origin}?mode=overlay&overlay=subathon&subathontheme=${settings.subathonTheme}&subathonfont=${settings.subathonFont || 'orbitron'}&subathonstyle=${settings.subathonStyle}${settings.subathonStartSeconds ? `&subathonsec=${settings.subathonStartSeconds}` : ''}`
-      : `${origin}?mode=overlay&overlay=${type}`;
+    let url = `${origin}?mode=overlay&overlay=${type}`;
+    if (type === 'subathon') {
+      url = `${origin}?mode=overlay&overlay=subathon&subathontheme=${settings.subathonTheme}&subathonfont=${settings.subathonFont || 'orbitron'}&subathonstyle=${settings.subathonStyle}${settings.subathonStartSeconds ? `&subathonsec=${settings.subathonStartSeconds}` : ''}`;
+    } else if (type === 'avatars') {
+      url = `${origin}?mode=overlay&overlay=avatars&avatarcount=${settings.avatarViewerCount}&avatarstyle=${settings.avatarStyle}&avatarsize=${settings.avatarSize}&avatarfloor=${settings.avatarFloorStyle}&avatarspeed=${settings.avatarSpeed}&avatarnames=${settings.avatarShowNametags ? 1 : 0}&avatarbubbles=${settings.avatarShowChatBubbles ? 1 : 0}`;
+    }
     navigator.clipboard.writeText(url).then(() => {
       setCopiedKey(type);
       setTimeout(() => setCopiedKey(null), 2500);
@@ -815,6 +960,17 @@ export default function App() {
                   <Timer className="w-3.5 h-3.5" />
                   6. Subathon Timer
                 </button>
+                <button
+                  onClick={() => setActiveWidgetView('avatars')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeWidgetView === 'avatars'
+                      ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40 shadow-[0_0_15px_rgba(236,72,153,0.2)]'
+                      : 'bg-slate-950 text-slate-400 hover:text-white border border-white/10'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  7. Stream Avatars
+                </button>
               </div>
 
               {/* Canvas Aspect Ratio & Mock Background */}
@@ -899,8 +1055,30 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* Centered Single View for Stream Avatars */}
+                    {activeWidgetView === 'avatars' && (
+                      <div className="flex-1 flex flex-col justify-end p-2 sm:p-4">
+                        <StreamAvatarsOverlay
+                          settings={settings}
+                          viewerCount={settings.avatarViewerCount}
+                          lastMessage={messages.length > 0 ? messages[messages.length - 1] : null}
+                          lastGift={currentGiftAlert}
+                          lastFollow={currentFollowAlert}
+                          lastShare={currentShareAlert}
+                          totalLikes={totalLikes}
+                          isOBSMode={false}
+                          onAddViewer={() =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              avatarViewerCount: (prev.avatarViewerCount || 0) + 1,
+                            }))
+                          }
+                        />
+                      </div>
+                    )}
+
                     {/* Top Row: Leaderboard (Left) & Subathon Timer (Right) & Gift Alert (Center) */}
-                    {activeWidgetView !== 'subathon' && (
+                    {activeWidgetView !== 'subathon' && activeWidgetView !== 'avatars' && (
                       <div className="flex items-start justify-between w-full pointer-events-auto gap-3">
                         {(activeWidgetView === 'all' || activeWidgetView === 'leaderboard') && (
                           <div
@@ -950,7 +1128,7 @@ export default function App() {
                     )}
 
                     {/* Follow & Share Alert Placed at Center / Top */}
-                    {activeWidgetView !== 'subathon' && (activeWidgetView === 'all' || activeWidgetView === 'follow' || activeWidgetView === 'share' || activeWidgetView === 'alerts') && (
+                    {activeWidgetView !== 'subathon' && activeWidgetView !== 'avatars' && (activeWidgetView === 'all' || activeWidgetView === 'follow' || activeWidgetView === 'share' || activeWidgetView === 'alerts') && (
                       <div
                         className={`absolute inset-x-0 top-16 sm:top-20 flex justify-center pointer-events-none z-30 ${
                           activeWidgetView === 'follow' || activeWidgetView === 'share' ? 'my-auto' : ''
@@ -966,9 +1144,9 @@ export default function App() {
                     )}
 
                     {/* Bottom Row: Chat Overlay */}
-                    {activeWidgetView !== 'subathon' && (activeWidgetView === 'all' || activeWidgetView === 'chat') && (
+                    {activeWidgetView !== 'subathon' && activeWidgetView !== 'avatars' && (activeWidgetView === 'all' || activeWidgetView === 'chat') && (
                       <div
-                        className={`pointer-events-auto transition-all duration-200 ${
+                        className={`pointer-events-auto transition-all duration-200 z-20 ${
                           settings.chatLayout === 'horizontal'
                             ? 'w-full h-24 sm:h-28 overflow-hidden'
                             : activeWidgetView === 'chat'
@@ -977,6 +1155,28 @@ export default function App() {
                         }`}
                       >
                         <ChatOverlayWidget messages={messages} settings={settings} />
+                      </div>
+                    )}
+
+                    {/* Stream Avatars walking at the bottom of the HUD in All Widgets mode */}
+                    {activeWidgetView === 'all' && settings.avatarEnabled && (
+                      <div className="absolute inset-x-0 bottom-0 pointer-events-none z-10">
+                        <StreamAvatarsOverlay
+                          settings={settings}
+                          viewerCount={settings.avatarViewerCount}
+                          lastMessage={messages.length > 0 ? messages[messages.length - 1] : null}
+                          lastGift={currentGiftAlert}
+                          lastFollow={currentFollowAlert}
+                          lastShare={currentShareAlert}
+                          totalLikes={totalLikes}
+                          isOBSMode={false}
+                          onAddViewer={() =>
+                            setSettings((prev) => ({
+                              ...prev,
+                              avatarViewerCount: (prev.avatarViewerCount || 0) + 1,
+                            }))
+                          }
+                        />
                       </div>
                     )}
                   </div>
@@ -1026,6 +1226,14 @@ export default function App() {
               onSendShare={handleSendTestShare}
               streamFollowCount={settings.streamFollowCount}
               streamShareCount={settings.streamShareCount}
+              avatarViewerCount={settings.avatarViewerCount}
+              onUpdateViewerCount={(count) => updateSettings({ avatarViewerCount: count })}
+              onTriggerAvatarJump={() => {
+                sounds.playTimerAdd();
+              }}
+              onTriggerAvatarCheer={() => {
+                sounds.playGift('rare');
+              }}
               isAutoSimulating={isAutoSimulating}
               onToggleAutoSim={() => setIsAutoSimulating((prev) => !prev)}
               soundEnabled={soundEnabled}

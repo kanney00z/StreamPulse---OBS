@@ -4,6 +4,7 @@ import { LikeLeaderboardWidget } from './LikeLeaderboardWidget';
 import { GiftOverlayWidget } from './GiftOverlayWidget';
 import { FollowShareOverlayWidget } from './FollowShareOverlayWidget';
 import { SubathonTimerWidget } from './SubathonTimerWidget';
+import { StreamAvatarsOverlay } from './StreamAvatarsOverlay';
 import {
   ChatMessage,
   GiftAlert,
@@ -27,7 +28,7 @@ import { ttsService } from '../utils/ttsService';
 import { IndoFinityClient } from '../services/indofinityService';
 
 interface OverlayViewProps {
-  overlayType: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'all';
+  overlayType: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all';
 }
 
 export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
@@ -44,7 +45,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   // Parse URL search params
   const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const rawTheme = urlParams.get('theme');
-  const themeParam = ((rawTheme === 'comic-pop-pink' ? 'comic-pop' : rawTheme) as ChatThemeId) || 'twitch-glow-dynamic';
+  const themeParam = ((rawTheme === 'comic-pop-pink' ? 'comic-pop' : rawTheme) as ChatThemeId) || 'multistream-pill-dynamic';
   const autoHideParam = Number(urlParams.get('autohide') || 10);
   const fontSizeParam = (urlParams.get('fontsize') as 'sm' | 'base' | 'lg' | 'xl') || 'base';
   const layoutParam = (urlParams.get('layout') as 'vertical' | 'horizontal') || 'vertical';
@@ -81,6 +82,15 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   const subathonTitleParam = urlParams.get('subathontitle') || 'SUBATHON MARATHON';
   const subathonSecParam = Number(urlParams.get('subathonsec') || 7200);
   const subathonCapParam = Number(urlParams.get('subathoncap') || 12);
+
+  // Stream Avatars URL Params
+  const avatarCountParam = Number(urlParams.get('avatarcount') || 10);
+  const avatarStyleParam = (urlParams.get('avatarstyle') as any) || 'shiba-squad';
+  const avatarSizeParam = (urlParams.get('avatarsize') as any) || 'md';
+  const avatarFloorParam = (urlParams.get('avatarfloor') as any) || 'transparent';
+  const avatarSpeedParam = Number(urlParams.get('avatarspeed') || 2.5);
+  const avatarNamesParam = urlParams.get('avatarnames') !== '0';
+  const avatarBubblesParam = urlParams.get('avatarbubbles') !== '0';
 
   const [settings, setSettings] = useState<OverlayCustomSettings>({
     chatTheme: themeParam,
@@ -149,6 +159,19 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     subathonMaxCapHours: subathonCapParam,
     subathonShowProgressBar: true,
     subathonSoundEnabled: true,
+
+    // Stream Avatars
+    avatarEnabled: true,
+    avatarViewerCount: avatarCountParam,
+    avatarStyle: avatarStyleParam,
+    avatarSize: avatarSizeParam,
+    avatarSpeed: avatarSpeedParam,
+    avatarShowNametags: avatarNamesParam,
+    avatarShowChatBubbles: avatarBubblesParam,
+    avatarShowGiftsReaction: true,
+    avatarShowLikesReaction: true,
+    avatarFloorStyle: avatarFloorParam,
+    avatarAllowCheer: true,
   });
 
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
@@ -488,6 +511,21 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
         </div>
       )}
 
+      {overlayType === 'avatars' && (
+        <div className="w-full h-full flex flex-col justify-end">
+          <StreamAvatarsOverlay
+            settings={settings}
+            viewerCount={settings.avatarViewerCount}
+            lastMessage={messages.length > 0 ? messages[messages.length - 1] : null}
+            lastGift={currentGiftAlert}
+            lastFollow={currentFollowAlert}
+            lastShare={currentShareAlert}
+            totalLikes={totalLikes}
+            isOBSMode={true}
+          />
+        </div>
+      )}
+
       {overlayType === 'all' && (
         <div className="w-full h-full relative p-4 flex flex-col justify-between">
           {/* Top Row: Like Leaderboard on left & Gift / Follow / Share Alerts centered */}
@@ -518,9 +556,25 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
             </div>
           </div>
 
-          {/* Bottom Left: Chat Overlay */}
-          <div className="w-96 h-96">
-            <ChatOverlayWidget messages={messages} settings={settings} isOBSMode={true} />
+          {/* Bottom Row: Chat Overlay on Left + Stream Avatars walking across bottom */}
+          <div className="w-full flex items-end justify-between relative">
+            <div className="w-96 h-80 z-20">
+              <ChatOverlayWidget messages={messages} settings={settings} isOBSMode={true} />
+            </div>
+            {settings.avatarEnabled && (
+              <div className="absolute inset-x-0 bottom-0 pointer-events-none z-10">
+                <StreamAvatarsOverlay
+                  settings={settings}
+                  viewerCount={settings.avatarViewerCount}
+                  lastMessage={messages.length > 0 ? messages[messages.length - 1] : null}
+                  lastGift={currentGiftAlert}
+                  lastFollow={currentFollowAlert}
+                  lastShare={currentShareAlert}
+                  totalLikes={totalLikes}
+                  isOBSMode={true}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

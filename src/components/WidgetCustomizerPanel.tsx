@@ -18,23 +18,25 @@ import {
   Eye,
   Settings2,
   Tv,
+  Users,
 } from 'lucide-react';
 import { OverlayCustomSettings, ChatThemeId } from '../types';
 import { CHAT_THEMES } from '../data/mockData';
 import { SubathonControlCard } from './SubathonControlCard';
+import { StreamAvatarControlCard } from './StreamAvatarControlCard';
 import { ttsService } from '../utils/ttsService';
 
-export type WidgetCategoryKey = 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'subathon';
+export type WidgetCategoryKey = 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'subathon' | 'avatars';
 
 interface WidgetCustomizerPanelProps {
-  activeWidgetView: 'all' | 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'subathon';
-  onSelectWidgetView: (view: 'all' | 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'subathon') => void;
+  activeWidgetView: 'all' | 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'subathon' | 'avatars';
+  onSelectWidgetView: (view: 'all' | 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'subathon' | 'avatars') => void;
   settings: OverlayCustomSettings;
   onUpdateSettings: (patch: Partial<OverlayCustomSettings>) => void;
   totalLikes: number;
   onResetLikes: () => void;
   onOpenGallery: () => void;
-  onCopyUrl: (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'subathon' | 'alerts') => void;
+  onCopyUrl: (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'subathon' | 'alerts' | 'avatars') => void;
   copiedKey: string | null;
   // Subathon props
   subathonSeconds: number;
@@ -129,6 +131,18 @@ const CATEGORIES: CategoryMeta[] = [
     borderColor: 'border-purple-500/40',
     bgColor: 'bg-purple-500/10',
     obsDimensions: '480 × 160 px',
+  },
+  {
+    key: 'avatars',
+    num: 7,
+    title: 'ตัวละครคนดูเดินบนจอ (Stream Avatars)',
+    shortTitle: '7. Avatars',
+    desc: 'ตัวละครเดินเล่นขอบจอด้านล่างตามจำนวนคนดู กระโดด เต้น ดีใจ และแสดงบอลลูนแชทสด',
+    icon: Users,
+    color: 'text-pink-400',
+    borderColor: 'border-pink-500/40',
+    bgColor: 'bg-pink-500/10',
+    obsDimensions: '1920 × 240 px (หรือ 1920 × 1080 px)',
   },
 ];
 
@@ -282,6 +296,13 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
               onChange={(e) => onUpdateSettings({ chatTheme: e.target.value as ChatThemeId })}
               className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
             >
+              <optgroup label="🌐 Multistream Floating Pill (ตามคลิปวิดีโอ 100%)">
+                {CHAT_THEMES.filter((t) => t.isMultistream).map((theme) => (
+                  <option key={theme.id} value={theme.id}>
+                    🌐 {theme.name} ({theme.badge})
+                  </option>
+                ))}
+              </optgroup>
               <optgroup label="💜 Twitch Dark Role Glow (ตามคลิป - 7 สไตล์)">
                 {CHAT_THEMES.filter((t) => t.isTwitchGlow).map((theme) => (
                   <option key={theme.id} value={theme.id}>
@@ -1029,6 +1050,19 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
         </div>
       )}
 
+      {/* ========================================================================= */}
+      {/* CATEGORY 7: STREAM AVATARS SPECIAL OVERLAYS */}
+      {/* ========================================================================= */}
+      {selectedCategory === 'avatars' && (
+        <div className="space-y-4">
+          <StreamAvatarControlCard
+            settings={settings}
+            onUpdateSettings={onUpdateSettings}
+            onCopyObsUrl={(type) => onCopyUrl(type as any)}
+          />
+        </div>
+      )}
+
       {/* 3. Dedicated OBS Universal Bundle Helper - Always helpful at bottom */}
       <div className="bg-gradient-to-br from-slate-900/90 via-slate-950 to-cyan-950/20 border border-white/10 rounded-3xl p-4 text-xs space-y-2">
         <div className="flex items-center justify-between text-slate-300">
@@ -1038,7 +1072,19 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
           </span>
           <span className="text-[10px] text-slate-400">คลิกเพื่อคัดลอก URL</span>
         </div>
-        <div className="grid grid-cols-3 gap-1.5 pt-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
+          <button
+            onClick={() => onCopyUrl('avatars')}
+            className="py-1.5 px-2 rounded-xl bg-slate-950 border border-pink-500/40 hover:border-pink-400 text-pink-300 text-[11px] font-bold truncate transition-all cursor-pointer shadow-[0_0_10px_rgba(236,72,153,0.15)]"
+          >
+            {copiedKey === 'avatars' ? '✓ 7. Avatars' : '✨ 7. Stream Avatars'}
+          </button>
+          <button
+            onClick={() => onCopyUrl('subathon')}
+            className="py-1.5 px-2 rounded-xl bg-slate-950 border border-purple-500/30 hover:border-purple-400 text-purple-300 text-[11px] font-bold truncate transition-all cursor-pointer"
+          >
+            {copiedKey === 'subathon' ? '✓ 6. Subathon' : '6. Subathon'}
+          </button>
           <button
             onClick={() => onCopyUrl('chat')}
             className="py-1.5 px-2 rounded-xl bg-slate-950 border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 text-[11px] font-bold truncate transition-all cursor-pointer"
@@ -1050,12 +1096,6 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
             className="py-1.5 px-2 rounded-xl bg-slate-950 border border-pink-500/30 hover:border-pink-400 text-pink-300 text-[11px] font-bold truncate transition-all cursor-pointer"
           >
             {copiedKey === 'leaderboard' ? '✓ 1. ยอดไลก์' : '1. ลิงก์ยอดไลก์'}
-          </button>
-          <button
-            onClick={() => onCopyUrl('subathon')}
-            className="py-1.5 px-2 rounded-xl bg-slate-950 border border-purple-500/30 hover:border-purple-400 text-purple-300 text-[11px] font-bold truncate transition-all cursor-pointer"
-          >
-            {copiedKey === 'subathon' ? '✓ 6. Subathon' : '6. ลิงก์ Subathon'}
           </button>
           <button
             onClick={() => onCopyUrl('gift')}

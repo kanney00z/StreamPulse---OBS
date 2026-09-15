@@ -20,6 +20,7 @@ import {
   Flame,
   Crown,
   Zap,
+  Users,
 } from 'lucide-react';
 import { OverlayCustomSettings, ChatThemeId, SubathonThemeId } from '../types';
 import { CHAT_THEMES, SUBATHON_THEMES } from '../data/mockData';
@@ -27,7 +28,7 @@ import { CHAT_THEMES, SUBATHON_THEMES } from '../data/mockData';
 interface OBSLinkHubProps {
   settings: OverlayCustomSettings;
   onUpdateSettings: (newSettings: Partial<OverlayCustomSettings>) => void;
-  onSelectPreviewTab: (tab: 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'all') => void;
+  onSelectPreviewTab: (tab: 'chat' | 'leaderboard' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all') => void;
   onSelectIndoFinityTab?: () => void;
 }
 
@@ -43,7 +44,7 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
   // Get current window origin or fallback
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
-  const getOverlayUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'all') => {
+  const getOverlayUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all') => {
     const params = new URLSearchParams();
     params.set('mode', 'overlay');
     params.set('overlay', type);
@@ -107,6 +108,16 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
       if (settings.subathonStartSeconds) {
         params.set('subathonsec', settings.subathonStartSeconds.toString());
       }
+    }
+
+    if (type === 'avatars') {
+      params.set('avatarcount', (settings.avatarViewerCount || 10).toString());
+      params.set('avatarstyle', settings.avatarStyle || 'chibi-pixel');
+      params.set('avatarsize', settings.avatarSize || 'md');
+      params.set('avatarfloor', settings.avatarFloorStyle || 'transparent');
+      params.set('avatarspeed', (settings.avatarSpeed || 2.5).toString());
+      params.set('avatarnames', settings.avatarShowNametags ? '1' : '0');
+      params.set('avatarbubbles', settings.avatarShowChatBubbles ? '1' : '0');
     }
 
     return `${origin}?${params.toString()}`;
@@ -889,6 +900,102 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
             </button>
             <a
               href={getOverlayUrl('subathon')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-1.5 text-center text-slate-400 hover:text-slate-200 text-xs flex items-center justify-center gap-1 transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              <span>เปิดทดสอบ</span>
+            </a>
+          </div>
+        </div>
+
+        {/* 7. Stream Avatars (ตัวละครเดินบนจอตามคนดู) */}
+        <div className="bg-slate-900/80 border border-pink-500/30 hover:border-pink-500/50 rounded-3xl p-5 sm:p-6 transition-all shadow-xl hover:shadow-[0_0_30px_rgba(236,72,153,0.15)] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+
+          <div className="flex-1 space-y-3 z-10">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="w-8 h-8 rounded-xl bg-pink-500/20 text-pink-400 font-bold flex items-center justify-center border border-pink-500/30">
+                <Users className="w-4 h-4" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-white tracking-tight">
+                    7. Stream Avatars (ตัวละครเดินบนจอตามคนดู)
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-pink-500/20 text-pink-300 border border-pink-500/40 animate-pulse">
+                    SPECIAL OVERLAY
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  ตัวละครเดินเล่นขอบล่างหน้าจอตามจำนวนคนดู กระโดด เต้น ดีใจตอนมีของขวัญ และขึ้นบอลลูนแชทสด
+                </p>
+              </div>
+            </div>
+
+            {/* Config details */}
+            <div className="flex items-center gap-4 flex-wrap text-xs text-slate-400 pt-1">
+              <div className="flex items-center gap-1.5">
+                <span>สไตล์ตัวละคร:</span>
+                <select
+                  value={settings.avatarStyle}
+                  onChange={(e) =>
+                    onUpdateSettings({ avatarStyle: e.target.value as any })
+                  }
+                  className="bg-slate-950 border border-white/15 rounded-lg px-2 py-1 text-xs text-pink-300 font-semibold focus:outline-none focus:border-pink-400"
+                >
+                  <option value="shiba-squad">🐕 Chubby Shiba Squad (แก๊งชิบะดุ๊กดิ๊ก BigBoy & Friends)</option>
+                  <option value="cute-animals">🐾 Cute Animals (แก๊งสัตว์น่ารัก 16 ชนิด)</option>
+                  <option value="chibi-pixel">🧙‍♂️ Chibi Pixel (อัศวิน/นักเวทย์/สาวแมว)</option>
+                  <option value="kawaii-slimes">🫧 Kawaii Slimes (สไลม์เยลลี่เด้งดึ๋ง)</option>
+                  <option value="cyber-mecha">🤖 Cyber Mecha (หุ่นยนต์ไซเบอร์พังค์)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span>จำนวนคนดู:</span>
+                <span className="font-mono text-[11px] text-pink-300 bg-pink-500/15 px-2 py-0.5 rounded border border-pink-500/30 font-bold">
+                  {settings.avatarViewerCount} ตัวละคร
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span>ขนาดแนะนำ:</span>
+                <span className="font-mono text-[11px] text-cyan-300 bg-cyan-400/10 px-2 py-0.5 rounded border border-cyan-400/20">
+                  1920 × 240 px (หรือ 1920 × 1080)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-row lg:flex-col gap-2 w-full lg:w-auto shrink-0 justify-end z-10">
+            <button
+              onClick={() => onSelectPreviewTab('avatars')}
+              className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Customize</span>
+            </button>
+            <button
+              onClick={() => copyToClipboard(getOverlayUrl('avatars'), 'avatars')}
+              className="px-4 py-2 bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/40 text-pink-300 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(236,72,153,0.2)] cursor-pointer"
+            >
+              {copiedKey === 'avatars' ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
+                  <span className="text-emerald-400">คัดลอกสำเร็จ!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  <span>Copy Avatars Link</span>
+                </>
+              )}
+            </button>
+            <a
+              href={getOverlayUrl('avatars')}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-1.5 text-center text-slate-400 hover:text-slate-200 text-xs flex items-center justify-center gap-1 transition-colors"
