@@ -116,8 +116,33 @@ class RealtimeSyncManager {
     let eventSource: EventSource | null = null;
     let reconnectTimeout: NodeJS.Timeout | null = null;
     let reconnectDelay = 1000;
+    let pollInterval: NodeJS.Timeout | null = null;
+    let lastKnownUpdatedAt = 0;
+    const clientType = callbacks.clientType || 'unknown';
 
-    // Listen to local BroadcastChannel
+    // 1. Immediate HTTP Snapshot Fetch (Gets current live settings within 5-15ms, 0 delay)
+    fetch(`/api/sync/state?sessionId=${sessionId}&type=${encodeURIComponent(clientType)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!isSubscribed) return;
+        if (data?.state) {
+          if (data.state.updatedAt) {
+            lastKnownUpdatedAt = Math.max(lastKnownUpdatedAt, data.state.updatedAt);
+          }
+          if (callbacks.onInit) {
+            callbacks.onInit(data.state);
+          }
+          if (data.state.settings && Object.keys(data.state.settings).length > 0) {
+            callbacks.onSettingsUpdate?.(data.state.settings);
+          }
+          callbacks.onStatusChange?.('connected');
+        }
+      })
+      .catch((err) => {
+        console.warn('[RealtimeSync] Initial snapshot fetch failed, falling back to SSE:', err);
+      });
+
+    // 2. Listen to local BroadcastChannel (0ms sync between browser tabs on same machine)
     const handleBroadcastMessage = (event: MessageEvent) => {
       if (!isSubscribed) return;
       const data = event.data as StreamSyncEvent;
@@ -140,12 +165,44 @@ class RealtimeSyncManager {
       this.broadcastChannel.addEventListener('message', handleBroadcastMessage);
     }
 
-    // Setup Server-Sent Events (SSE) for OBS Studio
+    // 3. Fast-Polling Watchdog (Ensures OBS CEF never desyncs even if SSE drops or proxy idles)
+    const runPollingWatchdog = async () => {
+      if (!isSubscribed) return;
+      try {
+        const res = await fetch(
+          `/api/sync/poll?since=${lastKnownUpdatedAt}&sessionId=${sessionId}&type=${encodeURIComponent(clientType)}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!isSubscribed) return;
+
+        if (data.updatedAt) {
+          lastKnownUpdatedAt = Math.max(lastKnownUpdatedAt, data.updatedAt);
+        }
+
+        if (data.changed) {
+          if (callbacks.onInit) {
+            callbacks.onInit(data);
+          }
+          if (data.settings && callbacks.onSettingsUpdate) {
+            callbacks.onSettingsUpdate(data.settings);
+          }
+          callbacks.onStatusChange?.('connected');
+        }
+      } catch {
+        // Silently retry next interval
+      }
+    };
+
+    // Run watchdog every 1000ms for OBS, 2000ms for dashboard
+    const pollFrequency = clientType === 'obs' ? 1000 : 2000;
+    pollInterval = setInterval(runPollingWatchdog, pollFrequency);
+
+    // 4. Setup Server-Sent Events (SSE) for Instant Push (0ms latency)
     const connectSSE = () => {
       if (!isSubscribed) return;
 
       callbacks.onStatusChange?.('connecting');
-      const clientType = callbacks.clientType || 'unknown';
       const url = `/api/sync/events?type=${encodeURIComponent(clientType)}&sessionId=${sessionId}`;
 
       try {
@@ -153,7 +210,7 @@ class RealtimeSyncManager {
 
         eventSource.onopen = () => {
           if (!isSubscribed) return;
-          reconnectDelay = 1000; // Reset delay
+          reconnectDelay = 1000; // Reset backoff
           callbacks.onStatusChange?.('connected');
         };
 
@@ -162,12 +219,16 @@ class RealtimeSyncManager {
           if (!isSubscribed) return;
           try {
             const state: RealtimeServerState = JSON.parse(e.data);
+            if (state.updatedAt) {
+              lastKnownUpdatedAt = Math.max(lastKnownUpdatedAt, state.updatedAt);
+            }
             if (callbacks.onInit) {
               callbacks.onInit(state);
             }
             if (state.settings && callbacks.onSettingsUpdate) {
               callbacks.onSettingsUpdate(state.settings);
             }
+            callbacks.onStatusChange?.('connected');
           } catch (err) {
             console.warn('[RealtimeSync] Failed to parse init state:', err);
           }
@@ -180,6 +241,7 @@ class RealtimeSyncManager {
             const data = JSON.parse(e.data);
             if (data._source === sessionId) return; // Don't echo self
             delete data._source;
+            lastKnownUpdatedAt = Date.now();
             callbacks.onSettingsUpdate?.(data);
           } catch (err) {
             console.warn('[RealtimeSync] Failed to parse settings_update:', err);
@@ -203,29 +265,27 @@ class RealtimeSyncManager {
 
         // Keepalive ping
         eventSource.addEventListener('ping', () => {
-          // connection healthy
+          callbacks.onStatusChange?.('connected');
         });
 
         eventSource.onerror = () => {
           if (!isSubscribed) return;
-          callbacks.onStatusChange?.('disconnected');
           if (eventSource) {
             eventSource.close();
             eventSource = null;
           }
 
-          // Auto reconnect with backoff
+          // Auto reconnect with quick backoff (polling watchdog continues in background)
           reconnectTimeout = setTimeout(() => {
             if (isSubscribed) {
-              reconnectDelay = Math.min(reconnectDelay * 1.5, 10000);
+              reconnectDelay = Math.min(reconnectDelay * 1.5, 5000);
               connectSSE();
             }
           }, reconnectDelay);
         };
       } catch (err) {
         console.warn('[RealtimeSync] SSE connection failed:', err);
-        callbacks.onStatusChange?.('disconnected');
-        reconnectTimeout = setTimeout(connectSSE, 3000);
+        reconnectTimeout = setTimeout(connectSSE, 2000);
       }
     };
 
@@ -236,6 +296,9 @@ class RealtimeSyncManager {
       isSubscribed = false;
       if (this.broadcastChannel) {
         this.broadcastChannel.removeEventListener('message', handleBroadcastMessage);
+      }
+      if (pollInterval) {
+        clearInterval(pollInterval);
       }
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);

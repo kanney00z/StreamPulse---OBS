@@ -1,20 +1,57 @@
 import { OverlayCustomSettings } from '../types';
 
 /**
+ * Generates a clean, modern Real-Time Live Sync OBS URL.
+ * OBS loads this URL once, and automatically syncs all live settings and duration changes
+ * from the Dashboard in real-time (without needing to re-copy or re-paste the link).
+ */
+export function generateCleanRealtimeOverlayUrl(
+  type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all',
+  origin: string = typeof window !== 'undefined' ? window.location.origin : '',
+  wsPort: string = '62024'
+): string {
+  const cleanOrigin = origin && origin.startsWith('http')
+    ? origin
+    : (typeof window !== 'undefined' ? window.location.origin : '');
+  const params = new URLSearchParams();
+  params.set('mode', 'overlay');
+  params.set('overlay', type);
+  if (wsPort && wsPort.trim() !== '62024') {
+    params.set('ws', `ws://localhost:${wsPort.trim()}`);
+  }
+  return `${cleanOrigin}?${params.toString()}`;
+}
+
+/**
  * Generates the full OBS Browser Source URL with all custom settings embedded as URL parameters.
- * This guarantees that when the link is pasted into OBS Studio, all customizations (theme, layout,
- * font size, TTS, sound, duration, styles, avatars, etc.) take effect immediately.
+ * Supports flexible parameters:
+ * - generateOverlayUrl(type, settings)
+ * - generateOverlayUrl(type, settings, wsPort)
+ * - generateOverlayUrl(type, settings, origin, wsPort)
  */
 export function generateOverlayUrl(
   type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all',
   settings: OverlayCustomSettings,
-  origin: string = typeof window !== 'undefined' ? window.location.origin : '',
-  wsPort: string = '62024'
+  originOrWsPort?: string,
+  maybeWsPort?: string
 ): string {
+  let resolvedOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  let resolvedWsPort = '62024';
+
+  if (originOrWsPort) {
+    if (originOrWsPort.startsWith('http://') || originOrWsPort.startsWith('https://')) {
+      resolvedOrigin = originOrWsPort;
+      if (maybeWsPort) resolvedWsPort = maybeWsPort;
+    } else if (/^\d+$/.test(originOrWsPort.trim())) {
+      // User passed a port number like "62024" as 3rd arg
+      resolvedWsPort = originOrWsPort.trim();
+    }
+  }
+
   const params = new URLSearchParams();
   params.set('mode', 'overlay');
   params.set('overlay', type);
-  params.set('ws', `ws://localhost:${wsPort?.trim() || '62024'}`);
+  params.set('ws', `ws://localhost:${resolvedWsPort}`);
 
   if (type === 'chat' || type === 'all') {
     if (settings.chatTheme) params.set('theme', settings.chatTheme);

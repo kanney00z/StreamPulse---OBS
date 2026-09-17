@@ -1,3 +1,4 @@
+import fs from 'fs';
 import https from 'https';
 import express from 'express';
 import path from 'path';
@@ -6,6 +7,17 @@ import { GoogleGenAI, Modality } from '@google/genai';
 
 const app = express();
 const PORT = 3000;
+
+// Enable CORS and buffer-free streaming headers for OBS Studio and external clients
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 app.use(express.json());
 
@@ -140,10 +152,112 @@ interface StreamSyncState {
   updatedAt: number;
 }
 
-let currentSyncState: StreamSyncState = {
-  settings: {},
-  updatedAt: Date.now(),
+const STATE_FILE_PATH = path.join(process.cwd(), 'stream_sync_state.json');
+
+const DEFAULT_SYNC_SETTINGS: Record<string, any> = {
+  chatTheme: 'multistream-pill-dynamic',
+  chatFontSize: 'base',
+  chatAutoHideSeconds: 10,
+  chatShowAvatars: true,
+  chatShowBadges: true,
+  chatShowTimestamps: true,
+  chatLayout: 'vertical',
+  chatDirection: 'down',
+  chatSoundEnabled: true,
+  chatMaxMessages: 35,
+  chatTtsEnabled: false,
+  chatTtsFormat: 'nameAndMessage',
+  chatTtsSpeed: 0.86,
+  chatTtsPitch: 1.05,
+  chatTtsVolume: 90,
+  chatTtsVoice: 'ai_female_google',
+  chatTtsSweetEnding: true,
+  likeGoal: 25000,
+  currentLikes: 0,
+  likeStyle: 'podium-card',
+  likeShowGoalBar: true,
+  likeShowTopCount: 5,
+  likeSoundEnabled: true,
+  giftSoundEnabled: true,
+  giftSoundVolume: 60,
+  giftDuration: 5,
+  giftShowParticles: true,
+  giftMinCoinFilter: 1,
+  giftStyle: 'banner-epic',
+  followAlertEnabled: true,
+  followSoundEnabled: true,
+  followTtsEnabled: true,
+  followDuration: 4,
+  followStyle: 'neon-banner',
+  shareAlertEnabled: true,
+  shareSoundEnabled: true,
+  shareTtsEnabled: true,
+  shareDuration: 4,
+  shareStyle: 'neon-banner',
+  streamFollowCount: 0,
+  streamShareCount: 0,
+  subathonTheme: 'cyberpunk-neon',
+  subathonFont: 'orbitron',
+  subathonStyle: 'frameless',
+  subathonTitle: 'SUBATHON MARATHON',
+  subathonStartSeconds: 7200,
+  subathonMaxCapHours: 12,
+  subathonAutoAdd: true,
+  subathonAddPerCoin: 1,
+  subathonAddPer100Likes: 5,
+  subathonAddPerFollow: 30,
+  subathonAddPerShare: 60,
+  subathonSoundEnabled: true,
+  avatarEnabled: true,
+  avatarViewerCount: 10,
+  avatarStyle: 'shiba-squad',
+  avatarSize: 'md',
+  avatarSpeed: 2.5,
+  avatarShowNametags: true,
+  avatarShowChatBubbles: true,
+  avatarFloorStyle: 'transparent',
 };
+
+function loadPersistedState(): StreamSyncState {
+  try {
+    if (fs.existsSync(STATE_FILE_PATH)) {
+      const content = fs.readFileSync(STATE_FILE_PATH, 'utf-8');
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          settings: { ...DEFAULT_SYNC_SETTINGS, ...(parsed.settings || {}) },
+          subathonSeconds: typeof parsed.subathonSeconds === 'number' ? parsed.subathonSeconds : 7200,
+          subathonIsRunning: typeof parsed.subathonIsRunning === 'boolean' ? parsed.subathonIsRunning : true,
+          totalLikes: typeof parsed.totalLikes === 'number' ? parsed.totalLikes : 0,
+          updatedAt: parsed.updatedAt || Date.now(),
+        };
+      }
+    }
+  } catch (e) {
+    console.warn('[RealtimeSync] Could not load persisted state from disk:', e);
+  }
+  return {
+    settings: { ...DEFAULT_SYNC_SETTINGS },
+    subathonSeconds: 7200,
+    subathonIsRunning: true,
+    totalLikes: 0,
+    updatedAt: Date.now(),
+  };
+}
+
+let currentSyncState: StreamSyncState = loadPersistedState();
+let saveStateTimer: NodeJS.Timeout | null = null;
+
+function persistStateDebounced() {
+  if (saveStateTimer) clearTimeout(saveStateTimer);
+  saveStateTimer = setTimeout(() => {
+    try {
+      fs.writeFileSync(STATE_FILE_PATH, JSON.stringify(currentSyncState, null, 2), 'utf-8');
+    } catch (e) {
+      console.warn('[RealtimeSync] Failed to persist state to disk:', e);
+    }
+  }, 500);
+}
 
 interface SSEClient {
   id: string;
@@ -153,34 +267,42 @@ interface SSEClient {
 }
 
 const sseClients = new Set<SSEClient>();
+// Active polling clients tracker (for OBS Studio CEF instances when SSE is throttled or dropped)
+const activePollClients = new Map<string, { clientType: string; lastSeen: number }>();
 
 function broadcastSSE(eventType: string, data: any) {
   const payload = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
   for (const client of Array.from(sseClients)) {
     try {
       client.res.write(payload);
+      if (typeof (client.res as any).flush === 'function') {
+        (client.res as any).flush();
+      }
     } catch {
       sseClients.delete(client);
     }
   }
 }
 
-// 15-second heartbeat ping to prevent connection timeout across any proxy/firewall
+// 7-second heartbeat ping to prevent connection timeouts across Cloud Run, Nginx, or proxy firewalls
 setInterval(() => {
   const pingMsg = `event: ping\ndata: ${Date.now()}\n\n`;
   for (const client of Array.from(sseClients)) {
     try {
       client.res.write(pingMsg);
+      if (typeof (client.res as any).flush === 'function') {
+        (client.res as any).flush();
+      }
     } catch {
       sseClients.delete(client);
     }
   }
-}, 15000);
+}, 7000);
 
 // SSE connection endpoint for OBS Browser Source and Dashboards
 app.get('/api/sync/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Cache-Control', 'no-cache, no-transform, no-store');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
@@ -194,10 +316,52 @@ app.get('/api/sync/events', (req, res) => {
 
   // Send initial full snapshot immediately
   res.write(`event: init\ndata: ${JSON.stringify(currentSyncState)}\n\n`);
+  if (typeof (res as any).flush === 'function') {
+    (res as any).flush();
+  }
 
   req.on('close', () => {
     sseClients.delete(client);
     console.log(`[Realtime SSE] Client disconnected: ${clientId}. Remaining: ${sseClients.size}`);
+  });
+});
+
+// Fast Polling endpoint (Fail-safe for OBS Studio CEF & firewalls)
+app.get('/api/sync/poll', (req, res) => {
+  const since = Number(req.query.since || 0);
+  const clientId = (req.query.sessionId as string) || 'anonymous';
+  const clientType = (req.query.type as string) || 'unknown';
+
+  activePollClients.set(clientId, {
+    clientType,
+    lastSeen: Date.now(),
+  });
+
+  // Prune expired clients (> 8s old)
+  const now = Date.now();
+  for (const [id, entry] of activePollClients.entries()) {
+    if (now - entry.lastSeen > 8000) {
+      activePollClients.delete(id);
+    }
+  }
+
+  const hasChanged = since === 0 || currentSyncState.updatedAt > since;
+
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  if (hasChanged) {
+    return res.json({
+      changed: true,
+      updatedAt: currentSyncState.updatedAt,
+      settings: currentSyncState.settings,
+      subathonSeconds: currentSyncState.subathonSeconds,
+      subathonIsRunning: currentSyncState.subathonIsRunning,
+      totalLikes: currentSyncState.totalLikes,
+    });
+  }
+
+  return res.json({
+    changed: false,
+    updatedAt: currentSyncState.updatedAt,
   });
 });
 
@@ -217,9 +381,10 @@ app.post('/api/sync/settings', (req, res) => {
         ...cleanSettings,
       };
       currentSyncState.updatedAt = Date.now();
+      persistStateDebounced();
 
       broadcastSSE('settings_update', incoming);
-      return res.json({ ok: true, activeClients: sseClients.size });
+      return res.json({ ok: true, activeClients: sseClients.size + activePollClients.size });
     }
     return res.status(400).json({ error: 'Invalid settings object' });
   } catch (err: any) {
@@ -247,8 +412,11 @@ app.post('/api/sync/event', (req, res) => {
       currentSyncState.totalLikes = event.payload.total;
     }
 
+    currentSyncState.updatedAt = Date.now();
+    persistStateDebounced();
+
     broadcastSSE('stream_event', event);
-    return res.json({ ok: true, activeClients: sseClients.size });
+    return res.json({ ok: true, activeClients: sseClients.size + activePollClients.size });
   } catch (err: any) {
     return res.status(500).json({ error: err?.message });
   }
@@ -256,18 +424,38 @@ app.post('/api/sync/event', (req, res) => {
 
 // Fetch current snapshot and connection health metrics
 app.get('/api/sync/state', (req, res) => {
-  const clientsList = Array.from(sseClients).map((c) => ({
+  // Prune poll clients
+  const now = Date.now();
+  for (const [id, entry] of activePollClients.entries()) {
+    if (now - entry.lastSeen > 8000) {
+      activePollClients.delete(id);
+    }
+  }
+
+  const sseList = Array.from(sseClients).map((c) => ({
     id: c.id,
     type: c.clientType,
+    channel: 'sse',
     uptimeSeconds: Math.floor((Date.now() - c.joinedAt) / 1000),
   }));
 
+  const pollList = Array.from(activePollClients.entries()).map(([id, entry]) => ({
+    id,
+    type: entry.clientType,
+    channel: 'polling',
+    uptimeSeconds: Math.floor((now - entry.lastSeen) / 1000),
+  }));
+
+  const combinedClients = [...sseList, ...pollList];
+  const obsCount = combinedClients.filter((c) => c.type === 'obs').length;
+
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.json({
     state: currentSyncState,
     metrics: {
-      totalClients: sseClients.size,
-      obsClients: clientsList.filter((c) => c.type === 'obs').length,
-      clients: clientsList,
+      totalClients: combinedClients.length,
+      obsClients: obsCount,
+      clients: combinedClients,
     },
   });
 });

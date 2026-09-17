@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { OverlayCustomSettings, ChatThemeId, SubathonThemeId } from '../types';
 import { CHAT_THEMES, SUBATHON_THEMES } from '../data/mockData';
-import { generateOverlayUrl } from '../utils/overlayUrl';
+import { generateOverlayUrl, generateCleanRealtimeOverlayUrl } from '../utils/overlayUrl';
 import { DurationCustomizerControl } from './DurationCustomizerControl';
 
 interface OBSLinkHubProps {
@@ -42,11 +42,15 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
 }) => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [customWsPort, setCustomWsPort] = useState('62024');
+  const [linkMode, setLinkMode] = useState<'realtime' | 'static'>('realtime');
 
   // Get current window origin or fallback
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   const getOverlayUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all') => {
+    if (linkMode === 'realtime') {
+      return generateCleanRealtimeOverlayUrl(type, origin, customWsPort.trim() || '62024');
+    }
     return generateOverlayUrl(type, settings, customWsPort.trim() || '62024');
   };
 
@@ -94,25 +98,53 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
         </div>
       </div>
 
-      {/* Real-Time Live Sync Active Highlight Banner */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/60 via-slate-900 to-indigo-950/50 border border-cyan-400/30 shadow-[0_0_20px_rgba(6,182,212,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)] shrink-0">
-            <Zap className="w-5 h-5 animate-pulse" />
+      {/* Real-Time Live Sync Active Highlight Banner & Mode Selector */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-cyan-950/70 via-slate-900 to-indigo-950/60 border border-cyan-400/40 shadow-[0_0_25px_rgba(6,182,212,0.2)] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)] shrink-0">
+            <Zap className="w-6 h-6 animate-pulse" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white tracking-wide">
+            <div className="flex items-center flex-wrap gap-2">
+              <span className="text-sm sm:text-base font-bold text-white tracking-wide">
                 ⚡ ระบบซิงค์สด OBS Real-Time (Live Mirror)
               </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 animate-pulse">
-                ซิงค์สดอัตโนมัติ
+              <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                ซิงค์สด Real-Time Active
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5">
-              คัดลอกลิงก์ไปใส่ใน OBS Browser Source ครั้งเดียว — ไม่ว่าจะเปลี่ยนธีม, ปรับขนาดตัวหนังสือ, แก้ไขเสียง TTS, เพิ่มเวลา Subathon หรือสั่งตัวละคร Avatars เดิน/หายตัว OBS จะอัปเดตตามทันทีโดยไม่ต้องกดรีเฟรช!
+            <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+              {linkMode === 'realtime'
+                ? '✨ โหมด Real-Time: คัดลอกลิงก์ใส่ใน OBS Browser Source ครั้งเดียว! ไม่ว่าจะปรับเวลา, เปลี่ยนธีม, ขยายฟอนต์, เปิด/ปิดเสียง หรือแก้ไข TTS ในแดชบอร์ดนี้ จอ OBS จะอัปเดตตามสดทันที 0.1 วินาที โดยไม่ต้องเปลี่ยนลิงก์หรือก็อปลิงก์ใหม่!'
+                : '📌 โหมด Static URL: ฝังค่าการตั้งค่าปัจจุบันลงใน URL (หากแก้ไขการตั้งค่าภายหลัง ต้องก็อปลิงก์ใหม่)'}
             </p>
           </div>
+        </div>
+
+        {/* Link Mode Switcher */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-950/90 border border-white/10 rounded-xl shrink-0 self-start lg:self-center">
+          <button
+            onClick={() => setLinkMode('realtime')}
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              linkMode === 'realtime'
+                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>⚡ ลิงก์ Real-Time (แนะนำ)</span>
+          </button>
+          <button
+            onClick={() => setLinkMode('static')}
+            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+              linkMode === 'static'
+                ? 'bg-slate-800 text-white border border-white/20'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <span>📌 ลิงก์ฟิกซ์ค่า (Static)</span>
+          </button>
         </div>
       </div>
 

@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Zap } from 'lucide-react';
 import { ChatOverlayWidget } from './ChatOverlayWidget';
 import { LikeLeaderboardWidget } from './LikeLeaderboardWidget';
 import { GiftOverlayWidget } from './GiftOverlayWidget';
@@ -227,6 +229,17 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   const shareTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const indoFinityClientRef = useRef<IndoFinityClient | null>(null);
 
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const syncNoticeTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const showLiveSyncNotice = (text: string) => {
+    setSyncNotice(text);
+    if (syncNoticeTimer.current) clearTimeout(syncNoticeTimer.current);
+    syncNoticeTimer.current = setTimeout(() => {
+      setSyncNotice(null);
+    }, 2200);
+  };
+
   // Sound & TTS settings
   useEffect(() => {
     sounds.enabled = true;
@@ -308,38 +321,40 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
 
   // Action: Handle new Follower
   const handleFollowAlert = (alert: FollowAlert) => {
-    if (settings.followSoundEnabled) {
+    const curSettings = settingsRef.current;
+    if (curSettings.followSoundEnabled) {
       sounds.playFollow();
     }
     setCurrentFollowAlert(alert);
     setSettings((prev) => ({ ...prev, streamFollowCount: prev.streamFollowCount + 1 }));
 
-    if (settings.followTtsEnabled && settings.chatTtsEnabled) {
+    if (curSettings.followTtsEnabled && curSettings.chatTtsEnabled) {
       ttsService.speakFollow(alert.username);
     }
 
     if (followTimeoutRef.current) clearTimeout(followTimeoutRef.current);
     followTimeoutRef.current = setTimeout(() => {
       setCurrentFollowAlert(null);
-    }, settings.followDuration * 1000);
+    }, (curSettings.followDuration || 4) * 1000);
   };
 
   // Action: Handle Stream Share
   const handleShareAlert = (alert: ShareAlert) => {
-    if (settings.shareSoundEnabled) {
+    const curSettings = settingsRef.current;
+    if (curSettings.shareSoundEnabled) {
       sounds.playShare();
     }
     setCurrentShareAlert(alert);
     setSettings((prev) => ({ ...prev, streamShareCount: prev.streamShareCount + (alert.shareCount || 1) }));
 
-    if (settings.shareTtsEnabled && settings.chatTtsEnabled) {
+    if (curSettings.shareTtsEnabled && curSettings.chatTtsEnabled) {
       ttsService.speakShare(alert.username);
     }
 
     if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
     shareTimeoutRef.current = setTimeout(() => {
       setCurrentShareAlert(null);
-    }, settings.shareDuration * 1000);
+    }, (curSettings.shareDuration || 4) * 1000);
   };
 
   // Action: Add Subathon Time
@@ -425,6 +440,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
           } catch (e) {}
           return merged;
         });
+        showLiveSyncNotice('⚡ ซิงค์การตั้งค่าสดเรียบร้อย');
       },
       onStreamEvent: (event) => {
         const curSettings = settingsRef.current;
@@ -499,20 +515,23 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     client.setCallbacks({
       onStatusChange: (s) => setIndoFinityStatus(s),
       onChat: (msg) => {
+        const curSettings = settingsRef.current;
         sounds.playChat();
         setMessages((prev) => [...prev.slice(-20), msg]);
-        if (settings.chatTtsEnabled) {
+        if (curSettings.chatTtsEnabled) {
           ttsService.speakChat(msg.username, msg.message);
         }
       },
       onLike: (data) => {
+        const curSettings = settingsRef.current;
         handleAddLikes(data.count, data.user, data.totalLikes);
-        if (settings.subathonAutoAdd && settings.subathonAddPer100Likes > 0 && data.count >= 10) {
-          const added = Math.max(1, Math.round((data.count / 100) * settings.subathonAddPer100Likes));
+        if (curSettings.subathonAutoAdd && curSettings.subathonAddPer100Likes > 0 && data.count >= 10) {
+          const added = Math.max(1, Math.round((data.count / 100) * curSettings.subathonAddPer100Likes));
           handleAddSubathonTime(added, `เคาะจอ ${data.count} ไลก์`);
         }
       },
       onGift: (alert) => {
+        const curSettings = settingsRef.current;
         if (alert.comboCount > 1) {
           sounds.playCombo(alert.comboCount);
         } else {
@@ -522,24 +541,26 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
         if (giftTimeoutRef.current) clearTimeout(giftTimeoutRef.current);
         giftTimeoutRef.current = setTimeout(() => {
           setCurrentGiftAlert(null);
-        }, settings.giftDuration * 1000);
+        }, (curSettings.giftDuration || 4) * 1000);
 
-        if (settings.subathonAutoAdd && settings.subathonAddPerCoin > 0) {
+        if (curSettings.subathonAutoAdd && curSettings.subathonAddPerCoin > 0) {
           const coinTotal = (alert.gift.coinValue || 1) * (alert.amount || 1);
-          const addedSecs = Math.max(1, Math.round(coinTotal * settings.subathonAddPerCoin));
+          const addedSecs = Math.max(1, Math.round(coinTotal * curSettings.subathonAddPerCoin));
           handleAddSubathonTime(addedSecs, alert.gift.nameTh || alert.gift.name, alert.senderName);
         }
       },
       onFollow: (alert) => {
+        const curSettings = settingsRef.current;
         handleFollowAlert(alert);
-        if (settings.subathonAutoAdd && settings.subathonAddPerFollow > 0) {
-          handleAddSubathonTime(settings.subathonAddPerFollow, 'คนติดตามใหม่', alert.username);
+        if (curSettings.subathonAutoAdd && curSettings.subathonAddPerFollow > 0) {
+          handleAddSubathonTime(curSettings.subathonAddPerFollow, 'คนติดตามใหม่', alert.username);
         }
       },
       onShare: (alert) => {
+        const curSettings = settingsRef.current;
         handleShareAlert(alert);
-        if (settings.subathonAutoAdd && settings.subathonAddPerShare > 0) {
-          handleAddSubathonTime(settings.subathonAddPerShare, 'คนแชร์ไลฟ์', alert.username);
+        if (curSettings.subathonAutoAdd && curSettings.subathonAddPerShare > 0) {
+          handleAddSubathonTime(curSettings.subathonAddPerShare, 'คนแชร์ไลฟ์', alert.username);
         }
       },
     });
@@ -549,17 +570,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     return () => {
       client.disconnect();
     };
-  }, [
-    wsUrlParam,
-    settings.giftDuration,
-    settings.followDuration,
-    settings.shareDuration,
-    settings.subathonAutoAdd,
-    settings.subathonAddPerFollow,
-    settings.subathonAddPerShare,
-    settings.subathonAddPer100Likes,
-    settings.subathonAddPerCoin,
-  ]);
+  }, [wsUrlParam]);
 
   return (
     <div className="w-screen h-screen overflow-hidden relative bg-transparent select-none">
@@ -635,8 +646,8 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
         <div className="w-full h-full flex items-center justify-center p-4">
           <SubathonTimerWidget
             seconds={subathonSeconds}
-            initialSeconds={subathonSecParam}
-            maxCapSeconds={settings.subathonMaxCapHours * 3600}
+            initialSeconds={settings.subathonStartSeconds ?? subathonSecParam ?? 7200}
+            maxCapSeconds={(settings.subathonMaxCapHours ?? 12) * 3600}
             isRunning={subathonIsRunning}
             theme={settings.subathonTheme}
             font={settings.subathonFont}
@@ -716,6 +727,22 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
           </div>
         </div>
       )}
+
+      {/* Real-time live sync toast feedback for OBS streamer confirmation */}
+      <AnimatePresence>
+        {syncNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -15, scale: 0.95 }}
+            transition={{ duration: 0.25 }}
+            className="fixed top-3 right-3 z-50 pointer-events-none flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950/90 border border-cyan-400/60 shadow-[0_0_20px_rgba(6,182,212,0.4)] text-cyan-300 text-xs font-semibold backdrop-blur-md"
+          >
+            <Zap className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <span>{syncNotice}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

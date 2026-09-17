@@ -42,7 +42,7 @@ import {
   IndoFinityConnectionStatus,
   IndoFinityLogItem,
 } from './types';
-import { generateOverlayUrl } from './utils/overlayUrl';
+import { generateOverlayUrl, generateCleanRealtimeOverlayUrl } from './utils/overlayUrl';
 import {
   INITIAL_CHAT_MESSAGES,
   INITIAL_LIKE_LEADERBOARD,
@@ -821,7 +821,7 @@ export default function App() {
   };
 
   const copyWidgetUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars') => {
-    const url = generateOverlayUrl(type, settings);
+    const url = generateCleanRealtimeOverlayUrl(type);
     navigator.clipboard.writeText(url).then(() => {
       setCopiedKey(type);
       setTimeout(() => setCopiedKey(null), 2500);
