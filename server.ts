@@ -266,12 +266,22 @@ interface SSEClient {
   joinedAt: number;
 }
 
+interface SyncedStreamEvent {
+  id: string;
+  type: string;
+  payload: any;
+  timestamp: number;
+}
+
 const sseClients = new Set<SSEClient>();
+// In-memory rolling buffer of the last 60 events so polling clients (OBS CEF) never miss an event
+const recentStreamEvents: SyncedStreamEvent[] = [];
 // Active polling clients tracker (for OBS Studio CEF instances when SSE is throttled or dropped)
 const activePollClients = new Map<string, { clientType: string; lastSeen: number }>();
 
 function broadcastSSE(eventType: string, data: any) {
-  const payload = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
+  // Padding comment appended to force proxies (Nginx, Cloud Run) to push through immediately without buffering
+  const payload = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n: ${Date.now()}\n\n`;
   for (const client of Array.from(sseClients)) {
     try {
       client.res.write(payload);
@@ -284,9 +294,9 @@ function broadcastSSE(eventType: string, data: any) {
   }
 }
 
-// 7-second heartbeat ping to prevent connection timeouts across Cloud Run, Nginx, or proxy firewalls
+// 5-second heartbeat ping to prevent connection timeouts across Cloud Run, Nginx, or proxy firewalls
 setInterval(() => {
-  const pingMsg = `event: ping\ndata: ${Date.now()}\n\n`;
+  const pingMsg = `event: ping\ndata: ${Date.now()}\n\n: heartbeat\n\n`;
   for (const client of Array.from(sseClients)) {
     try {
       client.res.write(pingMsg);
@@ -297,15 +307,19 @@ setInterval(() => {
       sseClients.delete(client);
     }
   }
-}, 7000);
+}, 5000);
 
 // SSE connection endpoint for OBS Browser Source and Dashboards
 app.get('/api/sync/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache, no-transform, no-store');
+  res.setHeader('Cache-Control', 'no-cache, no-transform, no-store, must-revalidate');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Pragma', 'no-cache');
   res.flushHeaders();
+
+  // Send 2KB initial comment padding to immediately defeat intermediate proxy buffering (Cloud Run / Nginx)
+  res.write(`: ${'x'.repeat(2048)}\n\n`);
 
   const clientId = (req.query.sessionId as string) || Math.random().toString(36).substring(2, 9);
   const clientType = (req.query.type as string) || 'unknown';
@@ -315,7 +329,7 @@ app.get('/api/sync/events', (req, res) => {
   console.log(`[Realtime SSE] Client connected: ${clientId} (${clientType}). Total active: ${sseClients.size}`);
 
   // Send initial full snapshot immediately
-  res.write(`event: init\ndata: ${JSON.stringify(currentSyncState)}\n\n`);
+  res.write(`event: init\ndata: ${JSON.stringify(currentSyncState)}\n\n: init-flush\n\n`);
   if (typeof (res as any).flush === 'function') {
     (res as any).flush();
   }
@@ -345,23 +359,29 @@ app.get('/api/sync/poll', (req, res) => {
     }
   }
 
-  const hasChanged = since === 0 || currentSyncState.updatedAt > since;
+  const hasSettingsChanged = since === 0 || currentSyncState.updatedAt > since;
+  const newEvents = since > 0 ? recentStreamEvents.filter((e) => e.timestamp > since) : [];
 
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  if (hasChanged) {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  if (hasSettingsChanged || newEvents.length > 0) {
     return res.json({
-      changed: true,
+      changed: hasSettingsChanged,
       updatedAt: currentSyncState.updatedAt,
       settings: currentSyncState.settings,
       subathonSeconds: currentSyncState.subathonSeconds,
       subathonIsRunning: currentSyncState.subathonIsRunning,
       totalLikes: currentSyncState.totalLikes,
+      events: newEvents,
     });
   }
 
   return res.json({
     changed: false,
     updatedAt: currentSyncState.updatedAt,
+    events: [],
   });
 });
 
@@ -410,6 +430,17 @@ app.post('/api/sync/event', (req, res) => {
       }
     } else if (event.type === 'likes' && event.payload && typeof event.payload.total === 'number') {
       currentSyncState.totalLikes = event.payload.total;
+    }
+
+    const eventRecord: SyncedStreamEvent = {
+      id: event.id || Math.random().toString(36).substring(2, 9),
+      type: event.type,
+      payload: event.payload,
+      timestamp: event.timestamp || Date.now(),
+    };
+    recentStreamEvents.push(eventRecord);
+    if (recentStreamEvents.length > 60) {
+      recentStreamEvents.shift();
     }
 
     currentSyncState.updatedAt = Date.now();

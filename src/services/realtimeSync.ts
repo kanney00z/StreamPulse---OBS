@@ -65,7 +65,7 @@ class RealtimeSyncManager {
     if (immediate) {
       sendToServer();
     } else {
-      this.settingsDebounceTimer = setTimeout(sendToServer, 60);
+      this.settingsDebounceTimer = setTimeout(sendToServer, 30);
     }
   }
 
@@ -120,8 +120,9 @@ class RealtimeSyncManager {
     let lastKnownUpdatedAt = 0;
     const clientType = callbacks.clientType || 'unknown';
 
-    // 1. Immediate HTTP Snapshot Fetch (Gets current live settings within 5-15ms, 0 delay)
-    fetch(`/api/sync/state?sessionId=${sessionId}&type=${encodeURIComponent(clientType)}`)
+    // 1. Immediate HTTP Snapshot Fetch (Gets current live settings within 5-15ms, 0 delay, cache-busted for OBS)
+    const initialUrl = `/api/sync/state?sessionId=${sessionId}&type=${encodeURIComponent(clientType)}&_t=${Date.now()}`;
+    fetch(initialUrl, { cache: 'no-store' })
       .then((r) => r.json())
       .then((data) => {
         if (!isSubscribed) return;
@@ -169,9 +170,8 @@ class RealtimeSyncManager {
     const runPollingWatchdog = async () => {
       if (!isSubscribed) return;
       try {
-        const res = await fetch(
-          `/api/sync/poll?since=${lastKnownUpdatedAt}&sessionId=${sessionId}&type=${encodeURIComponent(clientType)}`
-        );
+        const pollUrl = `/api/sync/poll?since=${lastKnownUpdatedAt}&sessionId=${sessionId}&type=${encodeURIComponent(clientType)}&_t=${Date.now()}`;
+        const res = await fetch(pollUrl, { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
         if (!isSubscribed) return;
@@ -189,13 +189,22 @@ class RealtimeSyncManager {
           }
           callbacks.onStatusChange?.('connected');
         }
+
+        // Process any stream events received during polling window
+        if (data.events && Array.isArray(data.events) && callbacks.onStreamEvent) {
+          for (const evt of data.events) {
+            if (evt.id && this.isProcessed(evt.id)) continue;
+            if (evt.id) this.markProcessed(evt.id);
+            callbacks.onStreamEvent(evt);
+          }
+        }
       } catch {
         // Silently retry next interval
       }
     };
 
-    // Run watchdog every 1000ms for OBS, 2000ms for dashboard
-    const pollFrequency = clientType === 'obs' ? 1000 : 2000;
+    // Run watchdog every 600ms for OBS, 2000ms for dashboard
+    const pollFrequency = clientType === 'obs' ? 600 : 2000;
     pollInterval = setInterval(runPollingWatchdog, pollFrequency);
 
     // 4. Setup Server-Sent Events (SSE) for Instant Push (0ms latency)

@@ -23,9 +23,10 @@ import {
   Users,
 } from 'lucide-react';
 import { OverlayCustomSettings, ChatThemeId, SubathonThemeId } from '../types';
-import { CHAT_THEMES, SUBATHON_THEMES } from '../data/mockData';
+import { CHAT_THEMES, SUBATHON_THEMES, GIFT_ITEMS } from '../data/mockData';
 import { generateOverlayUrl, generateCleanRealtimeOverlayUrl } from '../utils/overlayUrl';
 import { DurationCustomizerControl } from './DurationCustomizerControl';
+import { realtimeSync } from '../services/realtimeSync';
 
 interface OBSLinkHubProps {
   settings: OverlayCustomSettings;
@@ -43,9 +44,99 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [customWsPort, setCustomWsPort] = useState('62024');
   const [linkMode, setLinkMode] = useState<'realtime' | 'static'>('realtime');
+  const [testSentKey, setTestSentKey] = useState<string | null>(null);
 
   // Get current window origin or fallback
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
+
+  const triggerTestToObs = (key: string, fn: () => void) => {
+    fn();
+    setTestSentKey(key);
+    setTimeout(() => setTestSentKey(null), 1800);
+  };
+
+  const handleTestChat = () => {
+    triggerTestToObs('chat', () => {
+      realtimeSync.broadcastStreamEvent({
+        type: 'chat_message',
+        payload: {
+          id: 'chat-' + Date.now(),
+          username: 'SpacelabsGaming',
+          avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=120&auto=format&fit=crop&q=80',
+          message: '✨ ทดสอบแชทสด Real-time ส่งตรงเข้า OBS Studio สำเร็จแล้ว!',
+          timestamp: Date.now(),
+          platform: 'multistream',
+          roleTag: 'VIP',
+          roleColor: '#06b6d4',
+          badges: ['verified'],
+          color: '#38bdf8',
+        },
+      });
+    });
+  };
+
+  const handleTestGift = () => {
+    triggerTestToObs('gift', () => {
+      const lionGift = GIFT_ITEMS.find((g) => g.id === 'galaxy_lion') || GIFT_ITEMS[0];
+      realtimeSync.broadcastStreamEvent({
+        type: 'gift_alert',
+        payload: {
+          id: 'gift-' + Date.now(),
+          senderName: 'NongPloy_Live',
+          senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+          gift: lionGift,
+          amount: 1,
+          comboCount: 3,
+          customMessage: 'ส่งสิงโตกาแล็กซีให้สตรีมเมอร์คนเก่ง! 🎉',
+          timestamp: Date.now(),
+        },
+      });
+    });
+  };
+
+  const handleTestFollow = () => {
+    triggerTestToObs('follow', () => {
+      realtimeSync.broadcastStreamEvent({
+        type: 'follow_alert',
+        payload: {
+          id: 'follow-' + Date.now(),
+          username: 'Somchai_ProStreamer',
+          avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+          timestamp: Date.now(),
+          uniqueId: 'somchai_pro',
+        },
+      });
+    });
+  };
+
+  const handleTestShare = () => {
+    triggerTestToObs('share', () => {
+      realtimeSync.broadcastStreamEvent({
+        type: 'share_alert',
+        payload: {
+          id: 'share-' + Date.now(),
+          username: 'Nelly_Gamer',
+          avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=120&auto=format&fit=crop&q=80',
+          timestamp: Date.now(),
+          shareCount: 1,
+          uniqueId: 'nelly_gamer',
+        },
+      });
+    });
+  };
+
+  const handleTestSubathon = () => {
+    triggerTestToObs('subathon', () => {
+      realtimeSync.broadcastStreamEvent({
+        type: 'subathon_add_time',
+        payload: {
+          seconds: 60,
+          reason: '⚡ ทดสอบบวกเวลา 60 วิจากแดชบอร์ด',
+          senderName: 'สตรีมเมอร์',
+        },
+      });
+    });
+  };
 
   const getOverlayUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all') => {
     if (linkMode === 'realtime') {
@@ -179,6 +270,80 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
               placeholder="62024"
             />
           </div>
+        </div>
+      </div>
+
+      {/* Live OBS Action Direct Trigger Bar (Real-Time Verification) */}
+      <div className="p-4 rounded-2xl bg-slate-900/90 border border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.15)] flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-400">
+            <Zap className="w-4 h-4 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white">ทดสอบยิงเอฟเฟกต์สดไป OBS ทันที (Instant Live Test)</span>
+              {testSentKey && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500 text-slate-950 animate-bounce">
+                  ⚡ ส่งไปจอ OBS สำเร็จ!
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400">
+              กดปุ่มด้านล่างเพื่อทดสอบส่งข้อความ แดนซ์ กิฟต์ หรือแจ้งเตือนเข้าจอ OBS Studio ได้ทันทีโดยไม่ต้องเปิดสตรีมจริง
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center flex-wrap gap-2 w-full md:w-auto">
+          <button
+            type="button"
+            onClick={handleTestChat}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-cyan-900/60 border border-white/10 hover:border-cyan-400 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+            title="ส่งข้อความแชทตัวอย่างเข้าสู่จอ OBS"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>💬 ยิงแชทไป OBS</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleTestGift}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-pink-900/60 border border-white/10 hover:border-pink-400 text-pink-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+            title="ส่งของขวัญตัวอย่างสิงโตกาแล็กซีเข้าสู่จอ OBS"
+          >
+            <Gift className="w-3.5 h-3.5" />
+            <span>🎁 ยิงกิฟต์สิงโต</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleTestFollow}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-900/60 border border-white/10 hover:border-emerald-400 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+            title="ส่งการแจ้งเตือน Follow เข้าสู่จอ OBS"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>⭐ ยิง Follow</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleTestShare}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-purple-900/60 border border-white/10 hover:border-purple-400 text-purple-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+            title="ส่งการแจ้งเตือนแชร์เข้าสู่จอ OBS"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>🔁 ยิง Share</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleTestSubathon}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-amber-900/60 border border-white/10 hover:border-amber-400 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-sm"
+            title="เพิ่มเวลา 60 วินาทีใน Subathon บนจอ OBS"
+          >
+            <Timer className="w-3.5 h-3.5" />
+            <span>⏱️ +60วิ Subathon</span>
+          </button>
         </div>
       </div>
 

@@ -416,6 +416,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
         if (state.settings && Object.keys(state.settings).length > 0) {
           setSettings((prev) => {
             const merged = { ...prev, ...state.settings };
+            settingsRef.current = merged;
             try {
               localStorage.setItem('stream_overlay_settings', JSON.stringify(merged));
             } catch (e) {}
@@ -435,12 +436,57 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
       onSettingsUpdate: (newSettings) => {
         setSettings((prev) => {
           const merged = { ...prev, ...newSettings };
+          settingsRef.current = merged;
           try {
             localStorage.setItem('stream_overlay_settings', JSON.stringify(merged));
           } catch (e) {}
           return merged;
         });
-        showLiveSyncNotice('⚡ ซิงค์การตั้งค่าสดเรียบร้อย');
+
+        if (typeof (newSettings as any).subathonSeconds === 'number') {
+          setSubathonSeconds((newSettings as any).subathonSeconds);
+        }
+        if (typeof (newSettings as any).subathonIsRunning === 'boolean') {
+          setSubathonIsRunning((newSettings as any).subathonIsRunning);
+        }
+        if (typeof (newSettings as any).currentLikes === 'number') {
+          setTotalLikes((newSettings as any).currentLikes);
+        }
+
+        // If chat theme, layout, font, or autohide was updated, refresh message timestamps
+        // so the streamer immediately sees the new design in OBS even if stream is currently silent
+        if (
+          newSettings.chatTheme !== undefined ||
+          newSettings.chatLayout !== undefined ||
+          newSettings.chatFontSize !== undefined ||
+          newSettings.chatAutoHideSeconds !== undefined
+        ) {
+          setMessages((prev) => {
+            const now = Date.now();
+            if (prev.length === 0) {
+              return INITIAL_CHAT_MESSAGES.map((m, i) => ({ ...m, timestamp: now - (5 - i) * 1200 }));
+            }
+            const hideSec = (newSettings.chatAutoHideSeconds ?? settingsRef.current.chatAutoHideSeconds ?? 10);
+            const anyVisible = hideSec <= 0 || prev.some((m) => now - m.timestamp < hideSec * 1000);
+            if (!anyVisible) {
+              // Awaken the latest 3 messages so they animate into view with the new theme
+              return prev.map((m, idx) =>
+                idx >= prev.length - 3 ? { ...m, timestamp: now - (prev.length - idx) * 800 } : m
+              );
+            }
+            return prev;
+          });
+        }
+
+        const noticeText = newSettings.chatTheme
+          ? `⚡ ซิงค์ธีมสด: ${newSettings.chatTheme}`
+          : newSettings.chatAutoHideSeconds !== undefined
+          ? `⚡ ซิงค์เวลาแชท: ${newSettings.chatAutoHideSeconds === 0 ? 'คงอยู่ตลอด' : newSettings.chatAutoHideSeconds + ' วิ'}`
+          : newSettings.subathonTheme
+          ? `⚡ ซิงค์ Subathon สดเรียบร้อย`
+          : '⚡ ซิงค์การตั้งค่าสดเรียบร้อย';
+
+        showLiveSyncNotice(noticeText);
       },
       onStreamEvent: (event) => {
         const curSettings = settingsRef.current;
