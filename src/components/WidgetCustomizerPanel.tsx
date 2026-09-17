@@ -24,6 +24,7 @@ import { OverlayCustomSettings, ChatThemeId } from '../types';
 import { CHAT_THEMES } from '../data/mockData';
 import { SubathonControlCard } from './SubathonControlCard';
 import { StreamAvatarControlCard } from './StreamAvatarControlCard';
+import { DurationCustomizerControl } from './DurationCustomizerControl';
 import { ttsService } from '../utils/ttsService';
 import { generateOverlayUrl } from '../utils/overlayUrl';
 
@@ -382,18 +383,30 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
             </div>
 
             <div>
-              <label className="text-slate-400 mb-1 block font-medium">เวลาซ่อนข้อความ:</label>
-              <select
+              <DurationCustomizerControl
+                label="เวลาซ่อนข้อความ:"
                 value={settings.chatAutoHideSeconds}
-                onChange={(e) => onUpdateSettings({ chatAutoHideSeconds: Number(e.target.value) })}
-                className="w-full bg-slate-950 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-400"
-              >
-                <option value={0}>แสดงตลอดเวลา (ไม่ซ่อน)</option>
-                <option value={5}>ซ่อนหลัง 5 วินาที</option>
-                <option value={10}>ซ่อนหลัง 10 วินาที</option>
-                <option value={15}>ซ่อนหลัง 15 วินาที</option>
-                <option value={20}>ซ่อนหลัง 20 วินาที</option>
-              </select>
+                onChange={(sec) => onUpdateSettings({ chatAutoHideSeconds: sec })}
+                presets={[0, 3, 5, 7, 10, 15, 20, 30, 45, 60]}
+                presetLabels={{
+                  0: 'แสดงตลอดเวลา (ไม่ซ่อน)',
+                  3: 'ซ่อนหลัง 3 วินาที (เร็ว)',
+                  5: 'ซ่อนหลัง 5 วินาที',
+                  7: 'ซ่อนหลัง 7 วินาที',
+                  10: 'ซ่อนหลัง 10 วินาที (แนะนำ)',
+                  15: 'ซ่อนหลัง 15 วินาที',
+                  20: 'ซ่อนหลัง 20 วินาที',
+                  30: 'ซ่อนหลัง 30 วินาที',
+                  45: 'ซ่อนหลัง 45 วินาที',
+                  60: 'ซ่อนหลัง 60 วินาที (1 นาที)',
+                }}
+                allowZero={true}
+                zeroLabel="แสดงตลอดเวลา (ไม่ซ่อน)"
+                themeColor="cyan"
+                min={0}
+                max={3600}
+                subNote="0 = ไม่ซ่อน หรือพิมพ์จำนวนวินาทีที่ต้องการได้อิสระ"
+              />
             </div>
           </div>
 
@@ -701,19 +714,29 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
           </div>
 
           {/* 2. Duration & Particles */}
-          <div className="grid grid-cols-2 gap-2.5 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
             <div>
-              <label className="text-slate-400 mb-1 block font-medium">ระยะเวลาแสดงบนจอ:</label>
-              <select
+              <DurationCustomizerControl
+                label="ระยะเวลาแสดงของขวัญ:"
                 value={settings.giftDuration}
-                onChange={(e) => onUpdateSettings({ giftDuration: Number(e.target.value) })}
-                className="w-full bg-slate-950 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-400"
-              >
-                <option value={3}>3 วินาที (กระชับ)</option>
-                <option value={5}>5 วินาที (แนะนำ)</option>
-                <option value={8}>8 วินาที (ยาวนาน)</option>
-                <option value={10}>10 วินาที</option>
-              </select>
+                onChange={(sec) => onUpdateSettings({ giftDuration: sec })}
+                presets={[2, 3, 4, 5, 6, 8, 10, 15, 20]}
+                presetLabels={{
+                  2: '2 วินาที (เร็วมาก)',
+                  3: '3 วินาที (กระชับ)',
+                  4: '4 วินาที',
+                  5: '5 วินาที (แนะนำ)',
+                  6: '6 วินาที',
+                  8: '8 วินาที (ยาวนาน)',
+                  10: '10 วินาที',
+                  15: '15 วินาที',
+                  20: '20 วินาที',
+                }}
+                themeColor="amber"
+                min={1}
+                max={300}
+                subNote="พิมพ์จำนวนวินาทีได้อิสระ หรือกด + / - เพื่อปรับ"
+              />
             </div>
 
             <div>
@@ -831,18 +854,28 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
           </div>
 
           {/* 2. Duration & Sound */}
-          <div className="grid grid-cols-2 gap-2.5 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
             <div>
-              <label className="text-slate-400 mb-1 block font-medium">ระยะเวลาแสดงบนจอ:</label>
-              <select
+              <DurationCustomizerControl
+                label="ระยะเวลาแสดงผู้ติดตามใหม่:"
                 value={settings.followDuration}
-                onChange={(e) => onUpdateSettings({ followDuration: Number(e.target.value) })}
-                className="w-full bg-slate-950 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-rose-400"
-              >
-                <option value={3}>3 วินาที (กระชับ)</option>
-                <option value={5}>5 วินาที (แนะนำ)</option>
-                <option value={8}>8 วินาที</option>
-              </select>
+                onChange={(sec) => onUpdateSettings({ followDuration: sec })}
+                presets={[2, 3, 4, 5, 6, 8, 10, 15]}
+                presetLabels={{
+                  2: '2 วินาที (เร็วมาก)',
+                  3: '3 วินาที (กระชับ)',
+                  4: '4 วินาที',
+                  5: '5 วินาที (แนะนำ)',
+                  6: '6 วินาที',
+                  8: '8 วินาที',
+                  10: '10 วินาที',
+                  15: '15 วินาที',
+                }}
+                themeColor="rose"
+                min={1}
+                max={300}
+                subNote="พิมพ์จำนวนวินาทีได้อิสระ หรือกด + / - เพื่อปรับ"
+              />
             </div>
 
             <div>
@@ -950,18 +983,28 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
           </div>
 
           {/* 2. Duration & Sound */}
-          <div className="grid grid-cols-2 gap-2.5 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
             <div>
-              <label className="text-slate-400 mb-1 block font-medium">ระยะเวลาแสดงบนจอ:</label>
-              <select
+              <DurationCustomizerControl
+                label="ระยะเวลาแสดงคนแชร์ไลฟ์:"
                 value={settings.shareDuration}
-                onChange={(e) => onUpdateSettings({ shareDuration: Number(e.target.value) })}
-                className="w-full bg-slate-950 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-teal-400"
-              >
-                <option value={3}>3 วินาที (กระชับ)</option>
-                <option value={5}>5 วินาที (แนะนำ)</option>
-                <option value={8}>8 วินาที</option>
-              </select>
+                onChange={(sec) => onUpdateSettings({ shareDuration: sec })}
+                presets={[2, 3, 4, 5, 6, 8, 10, 15]}
+                presetLabels={{
+                  2: '2 วินาที (เร็วมาก)',
+                  3: '3 วินาที (กระชับ)',
+                  4: '4 วินาที',
+                  5: '5 วินาที (แนะนำ)',
+                  6: '6 วินาที',
+                  8: '8 วินาที',
+                  10: '10 วินาที',
+                  15: '15 วินาที',
+                }}
+                themeColor="teal"
+                min={1}
+                max={300}
+                subNote="พิมพ์จำนวนวินาทีได้อิสระ หรือกด + / - เพื่อปรับ"
+              />
             </div>
 
             <div>

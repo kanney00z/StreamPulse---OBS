@@ -25,6 +25,7 @@ import {
 import { OverlayCustomSettings, ChatThemeId, SubathonThemeId } from '../types';
 import { CHAT_THEMES, SUBATHON_THEMES } from '../data/mockData';
 import { generateOverlayUrl } from '../utils/overlayUrl';
+import { DurationCustomizerControl } from './DurationCustomizerControl';
 
 interface OBSLinkHubProps {
   settings: OverlayCustomSettings;
@@ -309,23 +310,30 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
                 </select>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <span>ซ่อนข้อความ:</span>
-                <select
-                  value={settings.chatAutoHideSeconds}
-                  onChange={(e) =>
-                    onUpdateSettings({
-                      chatAutoHideSeconds: Number(e.target.value),
-                    })
-                  }
-                  className="bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-400"
-                >
-                  <option value={0}>ไม่ซ่อน (แสดงตลอด)</option>
-                  <option value={5}>5 วินาที</option>
-                  <option value={10}>10 วินาที</option>
-                  <option value={20}>20 วินาที</option>
-                </select>
-              </div>
+              <DurationCustomizerControl
+                compact={true}
+                label="ซ่อนข้อความ:"
+                value={settings.chatAutoHideSeconds}
+                onChange={(sec) => onUpdateSettings({ chatAutoHideSeconds: sec })}
+                presets={[0, 3, 5, 7, 10, 15, 20, 30, 45, 60]}
+                presetLabels={{
+                  0: 'ไม่ซ่อน (แสดงตลอด)',
+                  3: '3 วินาที',
+                  5: '5 วินาที',
+                  7: '7 วินาที',
+                  10: '10 วินาที',
+                  15: '15 วินาที',
+                  20: '20 วินาที',
+                  30: '30 วินาที',
+                  45: '45 วินาที',
+                  60: '60 วินาที',
+                }}
+                allowZero={true}
+                zeroLabel="ไม่ซ่อน (แสดงตลอด)"
+                themeColor="cyan"
+                min={0}
+                max={3600}
+              />
 
               <div className="flex items-center gap-1.5">
                 <span>เลย์เอาต์:</span>
@@ -430,22 +438,16 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
             </p>
 
             <div className="flex items-center gap-4 text-xs pt-1 flex-wrap text-slate-400">
-              <div className="flex items-center gap-1.5">
-                <span>ระยะเวลา:</span>
-                <select
-                  value={settings.giftDuration}
-                  onChange={(e) =>
-                    onUpdateSettings({
-                      giftDuration: Number(e.target.value),
-                    })
-                  }
-                  className="bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-cyan-400"
-                >
-                  <option value={3}>3 วินาที</option>
-                  <option value={5}>5 วินาที</option>
-                  <option value={8}>8 วินาที</option>
-                </select>
-              </div>
+              <DurationCustomizerControl
+                compact={true}
+                label="ระยะเวลา:"
+                value={settings.giftDuration}
+                onChange={(sec) => onUpdateSettings({ giftDuration: sec })}
+                presets={[2, 3, 5, 8, 10, 15, 20]}
+                themeColor="amber"
+                min={1}
+                max={300}
+              />
 
               <div className="flex items-center gap-1.5">
                 <span>พลุกระดาษ:</span>
@@ -540,22 +542,16 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
             </p>
 
             <div className="flex items-center gap-4 text-xs pt-1 flex-wrap text-slate-400">
-              <div className="flex items-center gap-1.5">
-                <span>ระยะเวลา:</span>
-                <select
-                  value={settings.followDuration}
-                  onChange={(e) =>
-                    onUpdateSettings({
-                      followDuration: Number(e.target.value),
-                    })
-                  }
-                  className="bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-pink-400"
-                >
-                  <option value={3}>3 วินาที</option>
-                  <option value={4}>4 วินาที</option>
-                  <option value={6}>6 วินาที</option>
-                </select>
-              </div>
+              <DurationCustomizerControl
+                compact={true}
+                label="ระยะเวลา:"
+                value={settings.followDuration}
+                onChange={(sec) => onUpdateSettings({ followDuration: sec })}
+                presets={[2, 3, 4, 6, 8, 10, 15]}
+                themeColor="pink"
+                min={1}
+                max={300}
+              />
 
               <div className="flex items-center gap-1.5">
                 <span>เสียงพูดหวานใส:</span>
@@ -650,22 +646,16 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
             </p>
 
             <div className="flex items-center gap-4 text-xs pt-1 flex-wrap text-slate-400">
-              <div className="flex items-center gap-1.5">
-                <span>ระยะเวลา:</span>
-                <select
-                  value={settings.shareDuration}
-                  onChange={(e) =>
-                    onUpdateSettings({
-                      shareDuration: Number(e.target.value),
-                    })
-                  }
-                  className="bg-slate-950 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-teal-400"
-                >
-                  <option value={3}>3 วินาที</option>
-                  <option value={4}>4 วินาที</option>
-                  <option value={6}>6 วินาที</option>
-                </select>
-              </div>
+              <DurationCustomizerControl
+                compact={true}
+                label="ระยะเวลา:"
+                value={settings.shareDuration}
+                onChange={(sec) => onUpdateSettings({ shareDuration: sec })}
+                presets={[2, 3, 4, 6, 8, 10, 15]}
+                themeColor="teal"
+                min={1}
+                max={300}
+              />
 
               <div className="flex items-center gap-1.5">
                 <span>เสียงพูดหวานใส:</span>
