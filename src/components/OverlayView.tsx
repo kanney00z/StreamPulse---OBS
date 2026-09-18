@@ -408,10 +408,25 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     settingsRef.current = settings;
   }, [settings]);
 
+  // Keep Cloud Run reverse-proxy authentication cookie alive in OBS Studio CEF
+  useEffect(() => {
+    const keepCookieAlive = () => {
+      try {
+        if (typeof document !== 'undefined') {
+          document.cookie = `__SECURE-aistudio_auth_flow_may_set_cookies=true; Path=/; Secure; SameSite=None; Domain=${window.location.hostname}; Partitioned; Max-Age=3600;`;
+        }
+      } catch (e) {}
+    };
+    keepCookieAlive();
+    const interval = setInterval(keepCookieAlive, 20000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Connect to Real-Time Live Sync Engine (Web Dashboard <-> OBS Studio Mirror)
   useEffect(() => {
     const unsubscribe = realtimeSync.subscribe({
       clientType: 'obs',
+      roomId: urlParams.get('room') || undefined,
       onInit: (state) => {
         if (state.settings && Object.keys(state.settings).length > 0) {
           setSettings((prev) => {

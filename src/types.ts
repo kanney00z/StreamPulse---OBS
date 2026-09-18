@@ -475,6 +475,14 @@ export interface RealtimeServerState {
   subathonSeconds?: number;
   subathonIsRunning?: boolean;
   totalLikes?: number;
+  streamStats?: {
+    viewerCount?: number;
+    totalLikes?: number;
+    subscribersCount?: number;
+    diamondsCount?: number;
+    streamDurationSeconds?: number;
+    topGifters?: any[];
+  };
   updatedAt: number;
 }
 

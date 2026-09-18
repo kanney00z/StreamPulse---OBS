@@ -138,6 +138,12 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
     });
   };
 
+  const handleForceSyncAll = () => {
+    triggerTestToObs('force-sync', () => {
+      realtimeSync.broadcastSettings({ ...settings, _forceRefresh: true } as any, true);
+    });
+  };
+
   const getOverlayUrl = (type: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all') => {
     if (linkMode === 'realtime') {
       return generateCleanRealtimeOverlayUrl(type, origin, customWsPort.trim() || '62024');
@@ -343,6 +349,16 @@ export const OBSLinkHub: React.FC<OBSLinkHubProps> = ({
           >
             <Timer className="w-3.5 h-3.5" />
             <span>⏱️ +60วิ Subathon</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleForceSyncAll}
+            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(6,182,212,0.35)]"
+            title="ส่งสัญญาณบังคับรีเฟรชธีมและการตั้งค่าทั้งหมดไปจอ OBS ทันที"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>⚡ บังคับรีเฟรชจอ OBS</span>
           </button>
         </div>
       </div>

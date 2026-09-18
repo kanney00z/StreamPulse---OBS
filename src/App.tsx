@@ -220,24 +220,37 @@ export default function App() {
   // Active OBS Studio client connections counter
   const [activeObsClients, setActiveObsClients] = useState<number>(0);
 
-  // Broadcast initial settings on load and poll OBS connection status
+  // Broadcast initial settings on load, start P2P Host, and poll OBS connection status
   useEffect(() => {
     if (isOverlayMode) return;
     realtimeSync.broadcastSettings(settings, true);
 
+    const unsubscribe = realtimeSync.subscribe({
+      clientType: 'dashboard',
+    });
+
     const checkState = () => {
-      fetch('/api/sync/state')
-        .then((r) => r.json())
-        .then((data) => {
-          if (data?.metrics?.obsClients !== undefined) {
-            setActiveObsClients(data.metrics.obsClients);
-          }
+      const p2pCount = realtimeSync.getConnectedOBSCount();
+      fetch('/api/sync/state', { credentials: 'include' })
+        .then(async (r) => {
+          const text = await r.text();
+          if (text.startsWith('<')) return null;
+          return JSON.parse(text);
         })
-        .catch(() => {});
+        .then((data) => {
+          const serverCount = data?.metrics?.obsClients ?? 0;
+          setActiveObsClients(Math.max(p2pCount, serverCount));
+        })
+        .catch(() => {
+          setActiveObsClients(p2pCount);
+        });
     };
     checkState();
-    const interval = setInterval(checkState, 3500);
-    return () => clearInterval(interval);
+    const interval = setInterval(checkState, 2500);
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+    };
   }, [isOverlayMode]);
 
   // Sync sound mute/unmute and TTS settings
