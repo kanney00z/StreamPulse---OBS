@@ -89,12 +89,13 @@ export default function App() {
   // Global Overlay Settings State with localStorage persistence
   const [settings, setSettings] = useState<OverlayCustomSettings>(() => {
     const defaultSettings: OverlayCustomSettings = {
-      chatTheme: 'multistream-pill-dynamic',
+      chatTheme: 'multistream-tiktok-cyan',
       chatFontSize: 'base',
       chatAutoHideSeconds: 10,
       chatShowAvatars: true,
       chatShowBadges: true,
       chatShowTimestamps: true,
+      chatShowPlatformIcon: false,
       chatLayout: 'vertical',
       chatDirection: 'down',
       chatSoundEnabled: true,
@@ -493,12 +494,12 @@ export default function App() {
     if (rolePreset === 'tiktok') {
       const msg: ChatMessage = {
         id: 'chat-' + Date.now(),
-        username: 'Olive',
-        avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
-        message: 'this is a tiktok message this is a tiktok message !! this is a tiktok message !!',
+        username: 'Tee_Chonburi',
+        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+        message: 'สวัสดีครับพี่สตรีมเมอร์คนเก่งงง 👋',
         timestamp: Date.now(),
         platform: 'tiktok',
-        roleTag: 'TIKTOK',
+        roleTag: 'FAN',
         roleColor: '#06b6d4',
         badges: ['top_fan'],
         color: '#22d3ee',

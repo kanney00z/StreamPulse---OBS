@@ -216,7 +216,9 @@ export const MultistreamChatCard: React.FC<MultistreamChatCardProps> = ({
             <div
               className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs shadow-md tracking-tight ${style.pillBg}`}
             >
-              <span className="shrink-0">{style.platformIcon}</span>
+              {settings.chatShowPlatformIcon && (
+                <span className="shrink-0">{style.platformIcon}</span>
+              )}
               <span className="truncate max-w-[140px] sm:max-w-[180px]">
                 {msg.username}
               </span>

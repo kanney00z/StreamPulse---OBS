@@ -272,6 +272,7 @@ export interface OverlayCustomSettings {
   chatShowAvatars: boolean;
   chatShowBadges: boolean;
   chatShowTimestamps: boolean;
+  chatShowPlatformIcon?: boolean; // ปิดเพื่อไม่ให้ขึ้นไอคอนหรือโลโก้ TikTok / แพลตฟอร์มหน้าชื่อผู้ใช้ (เหมาะสำหรับสตรีมบน TikTok โดยเฉพาะ)
   chatLayout: 'vertical' | 'horizontal';
   chatDirection: 'up' | 'down';
   chatSoundEnabled: boolean;

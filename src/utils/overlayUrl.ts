@@ -81,6 +81,7 @@ export function generateOverlayUrl(
     params.set('timestamp', settings.chatShowTimestamps ? '1' : '0');
     params.set('avatars', settings.chatShowAvatars ? '1' : '0');
     params.set('badges', settings.chatShowBadges ? '1' : '0');
+    params.set('platicon', settings.chatShowPlatformIcon ? '1' : '0');
 
     // TTS URL params
     params.set('tts', settings.chatTtsEnabled ? '1' : '0');

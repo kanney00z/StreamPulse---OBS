@@ -57,7 +57,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   // Parse URL search params (URL query params take priority, then localStorage, then defaults)
   const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const rawTheme = urlParams.get('theme') || savedLocalSettings.chatTheme;
-  const themeParam = ((rawTheme === 'comic-pop-pink' ? 'comic-pop' : rawTheme) as ChatThemeId) || 'multistream-pill-dynamic';
+  const themeParam = ((rawTheme === 'comic-pop-pink' ? 'comic-pop' : rawTheme) as ChatThemeId) || 'multistream-tiktok-cyan';
   const autoHideParam = urlParams.has('autohide')
     ? Number(urlParams.get('autohide'))
     : (savedLocalSettings.chatAutoHideSeconds ?? 10);
@@ -72,6 +72,9 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   const showBadgesParam = urlParams.has('badges')
     ? urlParams.get('badges') !== '0'
     : (savedLocalSettings.chatShowBadges ?? true);
+  const showPlatformIconParam = urlParams.has('platicon')
+    ? urlParams.get('platicon') === '1'
+    : (savedLocalSettings.chatShowPlatformIcon ?? false);
   const soundParam = urlParams.has('sound')
     ? urlParams.get('sound') !== '0'
     : (savedLocalSettings.chatSoundEnabled ?? true);
@@ -135,6 +138,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     chatShowAvatars: showAvatarsParam,
     chatShowBadges: showBadgesParam,
     chatShowTimestamps: showTimestampsParam,
+    chatShowPlatformIcon: showPlatformIconParam,
     chatLayout: layoutParam,
     chatDirection: 'down',
     chatSoundEnabled: soundParam,

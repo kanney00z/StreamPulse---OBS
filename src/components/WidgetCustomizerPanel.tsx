@@ -447,6 +447,36 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
             </button>
           </div>
 
+          {/* 4.1 TikTok Platform Icon Toggle */}
+          <div className="p-3 bg-cyan-950/40 rounded-2xl border border-cyan-500/30 flex items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <div className="text-xs font-bold text-cyan-200 flex items-center gap-1.5">
+                <span>🎵 แสดงโลโก้แพลตฟอร์ม (TikTok / Twitch / YouTube):</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  settings.chatShowPlatformIcon
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                }`}>
+                  {settings.chatShowPlatformIcon ? 'เปิดแสดงโลโก้' : 'ปิดแล้ว (สตรีมใน TikTok ไม่ขึ้นซ้ำซ้อน)'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                เมื่อสตรีมใน TikTok แนะนำให้ปิด เพื่อไม่ให้มีคำว่า tiktok หรือไอคอนขึ้นหน้าชื่อคนเม้น
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onUpdateSettings({ chatShowPlatformIcon: !settings.chatShowPlatformIcon })}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 cursor-pointer ${
+                settings.chatShowPlatformIcon
+                  ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                  : 'bg-slate-900 text-slate-200 border-white/20 hover:border-cyan-400'
+              }`}
+            >
+              {settings.chatShowPlatformIcon ? 'เปิดไอคอนอยู่' : '✓ ปิดไอคอน TikTok (ตามที่ขอ)'}
+            </button>
+          </div>
+
           {/* 5. AI Sweet TTS Option */}
           <div className="p-3 bg-slate-950/80 rounded-2xl border border-pink-500/20 space-y-2">
             <div className="flex items-center justify-between">
