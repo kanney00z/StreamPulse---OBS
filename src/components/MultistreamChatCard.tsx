@@ -230,6 +230,26 @@ export const MultistreamChatCard: React.FC<MultistreamChatCardProps> = ({
                 {formatTimestamp(msg.timestamp)}
               </div>
             )}
+
+            {/* AI Emotion Tone Badge */}
+            {settings.chatAiEmotionShowBadge !== false && msg.emotionLabel && (
+              <div
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border shadow-sm backdrop-blur-md"
+                style={{
+                  backgroundColor: `${msg.emotionColor || '#06b6d4'}20`,
+                  borderColor: `${msg.emotionColor || '#06b6d4'}55`,
+                  color: msg.emotionColor || '#38bdf8',
+                }}
+                title={
+                  msg.emotionTone
+                    ? `AI Voice Tone: Pitch ${msg.emotionTone.pitch}x, Rate ${msg.emotionTone.rate}x`
+                    : 'วิเคราะห์อารมณ์ด้วย Gemini API'
+                }
+              >
+                <Sparkles className="w-2.5 h-2.5 opacity-80 shrink-0" />
+                <span>{msg.emotionLabel}</span>
+              </div>
+            )}
           </div>
 
           {/* Bottom Line: Speech Capsule / Message Bubble */}

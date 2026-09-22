@@ -11,9 +11,18 @@ import {
   User,
   UserCheck,
   MessageSquare,
+  BrainCircuit,
+  Smile,
+  Flame,
+  Zap,
 } from 'lucide-react';
 import { OverlayCustomSettings } from '../types';
 import { ttsService, TTSVoiceOption } from '../utils/ttsService';
+import {
+  analyzeChatEmotion,
+  EMOTION_PRESET_SAMPLES,
+  EmotionToneResult,
+} from '../services/geminiEmotionService';
 
 interface ChatTtsControlCardProps {
   settings: OverlayCustomSettings;
@@ -183,6 +192,57 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
       setCustomTestText('คุณ แซนดี้ บอกว่า: สวัสดีค่ะ ยินดีต้อนรับสู่ไลฟ์สตรีมนะคะ ขอให้สนุกกับไลฟ์ค่า');
     } else {
       setCustomTestText('คุณ ชาลิดา พูดว่า: สวัสดีค่ะ ยินดีต้อนรับสู่ไลฟ์สตรีมนะคะ พูดจังหวะปกติ ฟังสบาย ไม่เร็วเกินไปค่ะ');
+    }
+  };
+
+  const [lastAnalyzedEmotion, setLastAnalyzedEmotion] = useState<EmotionToneResult | null>(null);
+  const [isAnalyzingEmotion, setIsAnalyzingEmotion] = useState(false);
+
+  const handleTestEmotionSample = async (sample: typeof EMOTION_PRESET_SAMPLES[0]) => {
+    setIsAnalyzingEmotion(true);
+    try {
+      const result = await analyzeChatEmotion(
+        sample.message,
+        sample.sampleUser,
+        settings.chatAiEmotionIntensity || 'balanced'
+      );
+      setLastAnalyzedEmotion(result);
+      setCustomTestText(sample.message);
+      ttsService.speakChat(sample.sampleUser, sample.message, {
+        pitch: result.pitch,
+        rate: result.rate,
+        volume: result.volume,
+        sweetEnding: result.sweetEnding,
+        emotion: result.emotion,
+        emotionLabel: result.emotionLabel,
+      });
+    } finally {
+      setIsAnalyzingEmotion(false);
+    }
+  };
+
+  const handleAnalyzeAndSpeakCustom = async (textToSay?: string) => {
+    const rawText = textToSay || customTestText;
+    if (!rawText.trim()) return;
+
+    setIsAnalyzingEmotion(true);
+    try {
+      const result = await analyzeChatEmotion(
+        rawText,
+        'ผู้ชมในไลฟ์',
+        settings.chatAiEmotionIntensity || 'balanced'
+      );
+      setLastAnalyzedEmotion(result);
+      ttsService.speakChat('ผู้ชม', rawText, {
+        pitch: result.pitch,
+        rate: result.rate,
+        volume: result.volume,
+        sweetEnding: result.sweetEnding,
+        emotion: result.emotion,
+        emotionLabel: result.emotionLabel,
+      });
+    } finally {
+      setIsAnalyzingEmotion(false);
     }
   };
 
@@ -705,6 +765,204 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
             </label>
           </div>
 
+          {/* ========================================================================= */}
+          {/* GEMINI API CHAT EMOTION & VOICE TONE AUTO-MODULATION */}
+          {/* ========================================================================= */}
+          <div className="pt-3 border-t border-white/10 space-y-3">
+            {/* Header & Master Toggle */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-950/40 via-pink-950/30 to-cyan-950/30 border border-purple-500/30 space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-purple-300 shadow-sm">
+                    <BrainCircuit className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <span>วิเคราะห์อารมณ์ด้วย Gemini API ปรับ Voice Tone อัตโนมัติ</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full font-extrabold bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-xs">
+                        GEMINI AI
+                      </span>
+                    </h4>
+                    <p className="text-[10px] text-slate-400">
+                      ตรวจจับอารมณ์จากข้อความแชท แล้วปรับคีย์เสียง (Pitch) และความเร็วให้มีฟีลลิ่งตามความรู้สึกนั้นๆ
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    onUpdateSettings({
+                      chatAiEmotionTtsEnabled: !settings.chatAiEmotionTtsEnabled,
+                    })
+                  }
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                    settings.chatAiEmotionTtsEnabled
+                      ? 'bg-purple-500 text-white border border-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.4)]'
+                      : 'bg-slate-900 text-slate-400 border border-white/10 hover:text-white'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      settings.chatAiEmotionTtsEnabled ? 'bg-white animate-ping' : 'bg-slate-600'
+                    }`}
+                  />
+                  <span>
+                    {settings.chatAiEmotionTtsEnabled ? 'เปิด AI Emotion แล้ว' : 'เปิดใช้งาน'}
+                  </span>
+                </button>
+              </div>
+
+              {/* Sub-controls when AI Emotion is Enabled */}
+              {settings.chatAiEmotionTtsEnabled && (
+                <div className="space-y-3 pt-2 border-t border-purple-500/20">
+                  {/* Intensity & Badge Toggles */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {/* Intensity */}
+                    <div className="bg-slate-950/70 p-2 rounded-xl border border-white/5 space-y-1">
+                      <span className="text-[10px] text-purple-300 font-semibold flex items-center gap-1">
+                        <Flame className="w-3 h-3 text-purple-400" />
+                        <span>ระดับการแสดงอารมณ์ (Emotion Intensity):</span>
+                      </span>
+                      <div className="grid grid-cols-3 gap-1">
+                        {(
+                          [
+                            { id: 'gentle', label: 'ละมุน', desc: 'ปรับนุ่มๆ' },
+                            { id: 'balanced', label: 'สมดุล ★', desc: 'ธรรมชาติ' },
+                            { id: 'dramatic', label: 'ชัดเจน', desc: 'อินจัด' },
+                          ] as const
+                        ).map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => onUpdateSettings({ chatAiEmotionIntensity: opt.id })}
+                            className={`py-1 px-1.5 rounded-lg text-[10px] font-bold border transition-all text-center cursor-pointer ${
+                              (settings.chatAiEmotionIntensity || 'balanced') === opt.id
+                                ? 'bg-purple-500/25 border-purple-400 text-purple-200 shadow-sm'
+                                : 'bg-white/5 border-transparent text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            <div>{opt.label}</div>
+                            <div className="text-[9px] font-normal text-slate-400">{opt.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Show Badge Toggle */}
+                    <div className="bg-slate-950/70 p-2 rounded-xl border border-white/5 flex flex-col justify-center">
+                      <label className="text-[11px] text-slate-300 flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={settings.chatAiEmotionShowBadge !== false}
+                          onChange={(e) =>
+                            onUpdateSettings({ chatAiEmotionShowBadge: e.target.checked })
+                          }
+                          className="rounded accent-purple-400"
+                        />
+                        <span className="font-semibold text-slate-200">
+                          แสดงป้ายแท็กอารมณ์บนข้อความแชท
+                        </span>
+                      </label>
+                      <p className="text-[10px] text-slate-400 ml-5 mt-0.5">
+                        เช่น ป้าย <span className="text-amber-300">😊 ดีใจ</span>,{' '}
+                        <span className="text-pink-300">💖 อ้อน</span>,{' '}
+                        <span className="text-red-300">🔥 ไฮป์</span> ขึ้นข้างชื่อคนพิมพ์
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Preset Emotion Test Buttons */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-300 font-bold flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+                        <span>กดทดสอบน้ำเสียงตามอารมณ์ต่างๆ (7 อารมณ์หลัก):</span>
+                      </span>
+                      {isAnalyzingEmotion && (
+                        <span className="text-[10px] text-purple-400 flex items-center gap-1 font-mono animate-pulse">
+                          <Zap className="w-3 h-3" />
+                          <span>Gemini กำลังวิเคราะห์...</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                      {EMOTION_PRESET_SAMPLES.map((sample) => (
+                        <button
+                          key={sample.id}
+                          type="button"
+                          disabled={isAnalyzingEmotion}
+                          onClick={() => handleTestEmotionSample(sample)}
+                          className={`p-2 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${sample.badgeColor} hover:brightness-125 active:scale-95 disabled:opacity-50`}
+                        >
+                          <div className="font-bold text-xs truncate mb-0.5">{sample.label}</div>
+                          <div className="text-[10px] opacity-80 line-clamp-2 leading-tight">
+                            "{sample.message}"
+                          </div>
+                          <div className="mt-1.5 pt-1 border-t border-white/10 text-[9px] opacity-75 truncate">
+                            {sample.desc}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Live Analyzed Emotion Inspector Card */}
+                  {lastAnalyzedEmotion && (
+                    <div className="p-3 rounded-xl bg-slate-950/90 border border-white/10 space-y-1.5 text-xs animate-fadeIn">
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-300">ผลการวิเคราะห์ล่าสุด:</span>
+                          <span
+                            className="px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                            style={{
+                              backgroundColor: `${lastAnalyzedEmotion.color}20`,
+                              borderColor: `${lastAnalyzedEmotion.color}50`,
+                              color: lastAnalyzedEmotion.color,
+                            }}
+                          >
+                            {lastAnalyzedEmotion.emotionLabel}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400">
+                          แหล่งข้อมูล: {lastAnalyzedEmotion.source === 'gemini' ? '✨ Gemini 3.8 Flash' : '⚡ กฎด่วน (Fallback)'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-[10px]">
+                        <div className="bg-white/5 p-1.5 rounded-lg">
+                          <span className="text-slate-400 block text-[9px]">คีย์เสียง (Pitch):</span>
+                          <span className="text-purple-300 font-bold">{lastAnalyzedEmotion.pitch}x</span>
+                        </div>
+                        <div className="bg-white/5 p-1.5 rounded-lg">
+                          <span className="text-slate-400 block text-[9px]">ความเร็ว (Rate):</span>
+                          <span className="text-cyan-300 font-bold">{lastAnalyzedEmotion.rate}x</span>
+                        </div>
+                        <div className="bg-white/5 p-1.5 rounded-lg">
+                          <span className="text-slate-400 block text-[9px]">พลังเสียง (Energy):</span>
+                          <span className="text-amber-300 font-bold">{lastAnalyzedEmotion.energy}/10</span>
+                        </div>
+                        <div className="bg-white/5 p-1.5 rounded-lg">
+                          <span className="text-slate-400 block text-[9px]">คำลงท้ายหวาน:</span>
+                          <span className="text-pink-300 font-bold">
+                            {lastAnalyzedEmotion.sweetEnding ? 'มี (ค่า~)' : 'ไม่มี'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {lastAnalyzedEmotion.explanation && (
+                        <p className="text-[11px] text-slate-400 italic pt-0.5">
+                          "{lastAnalyzedEmotion.explanation}"
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Interactive Custom Test Text Box */}
           <div className="space-y-2 pt-2 border-t border-white/10">
             <div className="flex items-center justify-between">
@@ -738,11 +996,21 @@ export const ChatTtsControlCard: React.FC<ChatTtsControlCardProps> = ({
               />
               <button
                 type="button"
+                disabled={isAnalyzingEmotion}
+                onClick={() => handleAnalyzeAndSpeakCustom(customTestText)}
+                className="py-2 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(168,85,247,0.3)] active:scale-95 cursor-pointer shrink-0 disabled:opacity-50"
+                title="ใช้ Gemini API วิเคราะห์อารมณ์ข้อความนี้แล้วอ่านออกเสียงทันที"
+              >
+                <BrainCircuit className="w-3.5 h-3.5" />
+                <span>{isAnalyzingEmotion ? 'วิเคราะห์...' : 'วิเคราะห์อารมณ์ & ฟัง'}</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => handleTestSpeech(customTestText)}
-                className="py-2 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(6,182,212,0.25)] active:scale-95 cursor-pointer shrink-0"
+                className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(6,182,212,0.25)] active:scale-95 cursor-pointer shrink-0"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{isPlayingTest ? 'กำลังพูด...' : 'ทดลองฟัง'}</span>
+                <span>{isPlayingTest ? 'กำลังพูด...' : 'โทนปกติ'}</span>
               </button>
               <button
                 type="button"

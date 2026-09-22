@@ -498,30 +498,78 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
               </button>
             </div>
             {settings.chatTtsEnabled && (
-              <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
-                <div>
-                  <span className="text-[10px] text-slate-400 block mb-0.5">รูปแบบการอ่าน:</span>
-                  <select
-                    value={settings.chatTtsFormat}
-                    onChange={(e) => onUpdateSettings({ chatTtsFormat: e.target.value as any })}
-                    className="w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-200"
-                  >
-                    <option value="nameAndMessage">ชื่อ + ข้อความ</option>
-                    <option value="messageOnly">ข้อความอย่างเดียว</option>
-                    <option value="sweet">เติมคำหวาน (คุณ... พูดว่า)</option>
-                  </select>
+              <div className="space-y-2 pt-1 text-xs">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mb-0.5">รูปแบบการอ่าน:</span>
+                    <select
+                      value={settings.chatTtsFormat}
+                      onChange={(e) => onUpdateSettings({ chatTtsFormat: e.target.value as any })}
+                      className="w-full bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-200"
+                    >
+                      <option value="nameAndMessage">ชื่อ + ข้อความ</option>
+                      <option value="messageOnly">ข้อความอย่างเดียว</option>
+                      <option value="sweet">เติมคำหวาน (คุณ... พูดว่า)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mb-0.5">ความเร็วพูด ({settings.chatTtsSpeed.toFixed(2)}x):</span>
+                    <input
+                      type="range"
+                      min="0.7"
+                      max="1.3"
+                      step="0.05"
+                      value={settings.chatTtsSpeed}
+                      onChange={(e) => onUpdateSettings({ chatTtsSpeed: Number(e.target.value) })}
+                      className="w-full accent-pink-400 cursor-pointer"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block mb-0.5">ความเร็วพูด ({settings.chatTtsSpeed.toFixed(2)}x):</span>
-                  <input
-                    type="range"
-                    min="0.7"
-                    max="1.3"
-                    step="0.05"
-                    value={settings.chatTtsSpeed}
-                    onChange={(e) => onUpdateSettings({ chatTtsSpeed: Number(e.target.value) })}
-                    className="w-full accent-pink-400 cursor-pointer"
-                  />
+
+                {/* Gemini AI Emotion Tone Modulation Quick Controls */}
+                <div className="p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/30 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-purple-300 flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={settings.chatAiEmotionTtsEnabled !== false}
+                        onChange={(e) => onUpdateSettings({ chatAiEmotionTtsEnabled: e.target.checked })}
+                        className="rounded accent-purple-400"
+                      />
+                      <span>✨ ปรับ Voice Tone ตามอารมณ์แชทอัตโนมัติ (Gemini AI)</span>
+                    </label>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/30 text-purple-200 font-extrabold border border-purple-400/40">
+                      AI TONE
+                    </span>
+                  </div>
+
+                  {settings.chatAiEmotionTtsEnabled !== false && (
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-purple-500/20 text-[10px]">
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">ระดับอารมณ์:</span>
+                        <select
+                          value={settings.chatAiEmotionIntensity || 'balanced'}
+                          onChange={(e) => onUpdateSettings({ chatAiEmotionIntensity: e.target.value as any })}
+                          className="w-full bg-slate-900 border border-purple-500/30 rounded-lg px-2 py-1 text-[10px] text-purple-200"
+                        >
+                          <option value="gentle">ละมุน / นุ่มนวล</option>
+                          <option value="balanced">สมดุล / เป็นธรรมชาติ ★</option>
+                          <option value="dramatic">ชัดเจน / อินจัด</option>
+                        </select>
+                      </div>
+                      <div className="flex items-end">
+                        <label className="text-slate-300 flex items-center gap-1.5 cursor-pointer py-1">
+                          <input
+                            type="checkbox"
+                            checked={settings.chatAiEmotionShowBadge !== false}
+                            onChange={(e) => onUpdateSettings({ chatAiEmotionShowBadge: e.target.checked })}
+                            className="rounded accent-purple-400"
+                          />
+                          <span>แสดงป้ายอารมณ์ในแชท</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

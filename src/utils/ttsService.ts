@@ -29,6 +29,18 @@ export interface TTSVoiceOption {
   isAi?: boolean;
 }
 
+export interface TTSQueueItem {
+  text: string;
+  tone?: {
+    pitch?: number;
+    rate?: number;
+    volume?: number;
+    sweetEnding?: boolean;
+    emotion?: string;
+    emotionLabel?: string;
+  };
+}
+
 // Known Thai voice keywords across Windows (Edge), Chrome, macOS/iOS, and Android
 const MALE_THAI_KEYWORDS = ['niwat', 'pattara', 'male', 'man', 'boy', 'ชาย', 'หนุ่ม'];
 const FEMALE_THAI_KEYWORDS = [
@@ -47,7 +59,7 @@ const FEMALE_THAI_KEYWORDS = [
 ];
 
 class TTSEngine {
-  private queue: string[] = [];
+  private queue: TTSQueueItem[] = [];
   private isSpeaking: boolean = false;
   private currentAudio: HTMLAudioElement | null = null;
   private voices: SpeechSynthesisVoice[] = [];
@@ -266,15 +278,16 @@ class TTSEngine {
     return cleaned.trim();
   }
 
-  // Queue and speak a live incoming chat message
-  public speakChat(senderName: string, message: string) {
+  // Queue and speak a live incoming chat message with optional Gemini emotion tone override
+  public speakChat(senderName: string, message: string, customTone?: TTSQueueItem['tone']) {
     if (!this.options.enabled) return;
 
     let cleanedMsg = this.cleanText(message);
     if (!cleanedMsg) return;
 
     // Optional sweet ending particle (ค่า~ / ค่ะ) for friendly streamer vibe
-    if (this.options.sweetEnding) {
+    const shouldAddSweetEnding = customTone?.sweetEnding !== undefined ? customTone.sweetEnding : this.options.sweetEnding;
+    if (shouldAddSweetEnding) {
       const endsWithParticle = /(ค่ะ|ครับ|ค่า|นะ|จ้า|จ้ะ|คะ|ค้าบ|[?!])$/.test(cleanedMsg.trim());
       if (!endsWithParticle && cleanedMsg.length < 50) {
         cleanedMsg = `${cleanedMsg} ค่า`;
@@ -292,7 +305,7 @@ class TTSEngine {
       sentenceToSpeak = cleanedMsg;
     }
 
-    this.queue.push(sentenceToSpeak);
+    this.queue.push({ text: sentenceToSpeak, tone: customTone });
     this.processQueue();
   }
 
@@ -301,7 +314,7 @@ class TTSEngine {
     if (!this.options.enabled) return;
     const cleanSender = username.replace(/[@#_]/g, '').trim() || 'เพื่อนใหม่';
     const text = `ยินดีต้อนรับคุณ ${cleanSender} ขอบคุณที่กดติดตามช่องนะคะ`;
-    this.queue.push(text);
+    this.queue.push({ text, tone: { pitch: 1.12, rate: 0.88, sweetEnding: true } });
     this.processQueue();
   }
 
@@ -310,12 +323,12 @@ class TTSEngine {
     if (!this.options.enabled) return;
     const cleanSender = username.replace(/[@#_]/g, '').trim() || 'ผู้ชมใจดี';
     const text = `ขอบคุณคุณ ${cleanSender} ที่ช่วยแชร์ไลฟ์ให้นะคะ น่ารักมากๆ เลยค่า`;
-    this.queue.push(text);
+    this.queue.push({ text, tone: { pitch: 1.15, rate: 0.88, sweetEnding: true } });
     this.processQueue();
   }
 
   // Test TTS function with custom or sample text
-  public testSpeak(sampleText?: string) {
+  public testSpeak(sampleText?: string, customTone?: TTSQueueItem['tone']) {
     this.stop(); // Stop any pending speech
 
     let text = sampleText;
@@ -337,7 +350,7 @@ class TTSEngine {
       }
     }
 
-    this.queue.push(text);
+    this.queue.push({ text, tone: customTone });
     this.processQueue();
   }
 
@@ -346,8 +359,15 @@ class TTSEngine {
     if (typeof window === 'undefined') return;
     if (this.isSpeaking || this.queue.length === 0) return;
 
-    const nextText = this.queue.shift();
-    if (!nextText) return;
+    const nextItem = this.queue.shift();
+    if (!nextItem || !nextItem.text) return;
+
+    const nextText = nextItem.text;
+    const tone = nextItem.tone;
+    const effectiveRate = tone?.rate !== undefined ? tone.rate : (this.options.rate || 0.86);
+    const effectivePitch = tone?.pitch !== undefined ? tone.pitch : (this.options.pitch || 1.05);
+    const effectiveVolume = tone?.volume !== undefined ? tone.volume : (this.options.volume || 90);
+    const emotion = tone?.emotion;
 
     const voiceUri = this.options.voiceURI || 'ai_female_google';
 
@@ -355,7 +375,6 @@ class TTSEngine {
     // Any AI voice (ai_female_google, ai_female_kore, ai_female_zephyr, ai_male_puck)
     // OR female_auto / sweet_auto / default / male_auto
     // Cloud AI is always preferred because local browser voices vary drastically by OS
-    // (e.g. Windows only bundles Niwat male voice by default).
     const isExplicitLocalVoice =
       !voiceUri.startsWith('ai_') &&
       voiceUri !== 'female_auto' &&
@@ -377,7 +396,15 @@ class TTSEngine {
           ? 'ai_male_puck'
           : 'ai_female_google';
 
-      const success = await this.speakWithAi(nextText, aiVoiceName, aiGender);
+      const success = await this.speakWithAi(
+        nextText,
+        aiVoiceName,
+        aiGender,
+        effectiveRate,
+        effectivePitch,
+        effectiveVolume,
+        emotion
+      );
       if (success) {
         return;
       }
@@ -385,11 +412,19 @@ class TTSEngine {
     }
 
     // Browser Web Speech API fallback
-    this.speakWithBrowser(nextText);
+    this.speakWithBrowser(nextText, effectiveRate, effectivePitch, effectiveVolume);
   }
 
   // Speak using server-side Gemini TTS
-  private async speakWithAi(text: string, voiceName: string, gender: 'female' | 'male'): Promise<boolean> {
+  private async speakWithAi(
+    text: string,
+    voiceName: string,
+    gender: 'female' | 'male',
+    rate: number,
+    pitch: number,
+    volume: number,
+    emotion?: string
+  ): Promise<boolean> {
     try {
       this.isSpeaking = true;
 
@@ -400,7 +435,9 @@ class TTSEngine {
           text,
           voice: voiceName,
           gender,
-          speed: this.options.rate,
+          speed: rate,
+          pitch,
+          emotion,
         }),
       });
 
@@ -415,8 +452,8 @@ class TTSEngine {
       const audio = new Audio(audioUrl);
       this.currentAudio = audio;
 
-      audio.volume = Math.min(Math.max(this.options.volume / 100, 0), 1);
-      audio.playbackRate = Math.min(Math.max(this.options.rate, 0.75), 1.25);
+      audio.volume = Math.min(Math.max(volume / 100, 0), 1);
+      audio.playbackRate = Math.min(Math.max(rate, 0.70), 1.30);
 
       return new Promise<boolean>((resolve) => {
         audio.onended = () => {
@@ -451,7 +488,7 @@ class TTSEngine {
   }
 
   // Speak using Web Speech API
-  private speakWithBrowser(text: string) {
+  private speakWithBrowser(text: string, rate?: number, pitch?: number, volume?: number) {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       this.isSpeaking = false;
       return;
@@ -464,9 +501,10 @@ class TTSEngine {
 
       const utterance = new SpeechSynthesisUtterance(text);
 
-      const targetRate = this.options.rate || 0.86;
+      const targetRate = rate !== undefined ? rate : (this.options.rate || 0.86);
       utterance.rate = Math.min(Math.max(targetRate, 0.65), 1.30);
-      utterance.volume = Math.min(Math.max(this.options.volume / 100, 0), 1);
+      const targetVolume = volume !== undefined ? volume : (this.options.volume || 90);
+      utterance.volume = Math.min(Math.max(targetVolume / 100, 0), 1);
 
       if (this.voices.length === 0) {
         this.loadVoices();
@@ -530,7 +568,7 @@ class TTSEngine {
       }
 
       // Pitch calculation
-      let effectivePitch = this.options.pitch || 1.05;
+      let effectivePitch = pitch !== undefined ? pitch : (this.options.pitch || 1.05);
       if (requiresFemalePitchLift) {
         effectivePitch = Math.max(effectivePitch, 1.35);
       }

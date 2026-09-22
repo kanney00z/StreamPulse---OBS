@@ -1,6 +1,6 @@
 {
   "name": "StreamPulse - OBS Overlay & Alert Studio",
-  "description": "ระบบสร้างวิดเจ็ต OBS สตรีมเมอร์ระดับมืออาชีพ: กล่องแชท, Subathon Timer ธีม 3D นูนลอย, Stream Avatars ตัวละครเดินบนจอตามคนดู, Like Leaderboard, ระบบอ่านแชทสด TTS และ Gift Alert พร้อมลิงก์ OBS Browser Source",
+  "description": "ระบบสร้างวิดเจ็ต OBS สตรีมเมอร์ระดับมืออาชีพ: กล่องแชท, วิเคราะห์อารมณ์ข้อความแชทด้วย Gemini API ปรับ Voice Tone TTS อัตโนมัติ, Subathon Timer ธีม 3D นูนลอย, Stream Avatars ตัวละครเดินบนจอ, Like Leaderboard และ Gift Alert พร้อมลิงก์ OBS Browser Source",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

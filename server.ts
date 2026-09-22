@@ -3,7 +3,7 @@ import https from 'https';
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI, Modality } from '@google/genai';
+import { GoogleGenAI, Modality, Type } from '@google/genai';
 
 const app = express();
 const PORT = 3000;
@@ -172,6 +172,9 @@ const DEFAULT_SYNC_SETTINGS: Record<string, any> = {
   chatTtsVolume: 90,
   chatTtsVoice: 'ai_female_google',
   chatTtsSweetEnding: true,
+  chatAiEmotionTtsEnabled: true,
+  chatAiEmotionShowBadge: true,
+  chatAiEmotionIntensity: 'balanced',
   likeGoal: 25000,
   currentLikes: 0,
   likeStyle: 'podium-card',
@@ -491,10 +494,405 @@ app.get('/api/sync/state', (req, res) => {
   });
 });
 
+// =========================================================================
+// GEMINI API CHAT EMOTION & VOICE TONE AUTO-MODULATION ENGINE
+// =========================================================================
+
+interface EmotionToneResult {
+  emotion: 'joyful' | 'sweet' | 'excited' | 'teasing' | 'supportive' | 'angry' | 'sad' | 'neutral';
+  emotionLabel: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  energy: number; // 1 - 10
+  pitch: number; // 0.85 - 1.30
+  rate: number; // 0.75 - 1.15
+  volume: number; // 70 - 100
+  sweetEnding: boolean;
+  color: string;
+  explanation: string;
+  source: 'gemini' | 'rule-fallback';
+}
+
+const emotionCache = new Map<string, EmotionToneResult>();
+
+// Fallback rule-based Thai emotion analyzer for immediate offline/low-latency responsiveness
+function getFallbackEmotion(text: string): EmotionToneResult {
+  const t = (text || '').toLowerCase();
+
+  // 1. Joyful / Laughing
+  if (
+    t.includes('555') ||
+    t.includes('ฮ่า') ||
+    t.includes('ขำ') ||
+    t.includes('ตลก') ||
+    t.includes('เย้') ||
+    t.includes('ดีใจ') ||
+    t.includes('ชนะ') ||
+    t.includes('ฮา') ||
+    t.includes('สนุก')
+  ) {
+    return {
+      emotion: 'joyful',
+      emotionLabel: '😊 ดีใจ / ร่าเริง',
+      sentiment: 'positive',
+      energy: 8,
+      pitch: 1.18,
+      rate: 0.96,
+      volume: 95,
+      sweetEnding: true,
+      color: '#f59e0b',
+      explanation: 'ข้อความแสดงความสุข การหัวเราะหรือความสำเร็จ',
+      source: 'rule-fallback',
+    };
+  }
+
+  // 2. Sweet / Cute / Adorable
+  if (
+    t.includes('น่ารัก') ||
+    t.includes('หวาน') ||
+    t.includes('สวย') ||
+    t.includes('อ้อน') ||
+    t.includes('คิดถึง') ||
+    t.includes('รัก') ||
+    t.includes('ฝากตัว') ||
+    t.includes('หลง') ||
+    t.includes('จุ๊บ') ||
+    t.includes('แฟน') ||
+    t.includes('ใจละลาย')
+  ) {
+    return {
+      emotion: 'sweet',
+      emotionLabel: '💖 ออดอ้อน / หวานแหวว',
+      sentiment: 'positive',
+      energy: 6,
+      pitch: 1.14,
+      rate: 0.82,
+      volume: 90,
+      sweetEnding: true,
+      color: '#ec4899',
+      explanation: 'ข้อความชื่นชม ออดอ้อน หรือแสดงความเอ็นดู',
+      source: 'rule-fallback',
+    };
+  }
+
+  // 3. Excited / Hype
+  if (
+    t.includes('สุดยอด') ||
+    t.includes('โห') ||
+    t.includes('ว้าว') ||
+    t.includes('เชียร์') ||
+    t.includes('ไปเลย') ||
+    t.includes('เอาเรื่อง') ||
+    t.includes('มันส์') ||
+    t.includes('เทพ') ||
+    t.includes('โกง') ||
+    t.includes('ตื่นเต้น') ||
+    t.includes('มาหวะ') ||
+    t.includes('ดุเดือด')
+  ) {
+    return {
+      emotion: 'excited',
+      emotionLabel: '🔥 ตื่นเต้น / ไฮป์',
+      sentiment: 'positive',
+      energy: 9,
+      pitch: 1.24,
+      rate: 1.04,
+      volume: 100,
+      sweetEnding: false,
+      color: '#ef4444',
+      explanation: 'ข้อความตื่นเต้น เร้าใจ ไฮป์ หรือร่วมเชียร์อย่างดุเดือด',
+      source: 'rule-fallback',
+    };
+  }
+
+  // 4. Teasing / Playful
+  if (
+    t.includes('แน่จริง') ||
+    t.includes('ขี้โม้') ||
+    t.includes('แอบ') ||
+    t.includes('จับได้') ||
+    t.includes('กวน') ||
+    t.includes('แซว') ||
+    t.includes('หล่อเลยดิ') ||
+    t.includes('เขิน') ||
+    t.includes('อำ')
+  ) {
+    return {
+      emotion: 'teasing',
+      emotionLabel: '😜 หยอกล้อ / แซว',
+      sentiment: 'positive',
+      energy: 7,
+      pitch: 1.12,
+      rate: 0.94,
+      volume: 92,
+      sweetEnding: false,
+      color: '#8b5cf6',
+      explanation: 'ข้อความแซว หยอกล้อ หรือเป็นกันเอง',
+      source: 'rule-fallback',
+    };
+  }
+
+  // 5. Supportive / Grateful
+  if (
+    t.includes('สู้ๆ') ||
+    t.includes('ขอบคุณ') ||
+    t.includes('กำลังใจ') ||
+    t.includes('พักผ่อน') ||
+    t.includes('ดูแลตัวเอง') ||
+    t.includes('ซาบซึ้ง') ||
+    t.includes('เก่งมาก') ||
+    t.includes('ยินดี')
+  ) {
+    return {
+      emotion: 'supportive',
+      emotionLabel: '🤝 ให้กำลังใจ / ซึ้ง',
+      sentiment: 'positive',
+      energy: 5,
+      pitch: 1.04,
+      rate: 0.84,
+      volume: 90,
+      sweetEnding: true,
+      color: '#10b981',
+      explanation: 'ข้อความให้กำลังใจ ปลอบโยน หรือขอบคุณด้วยความจริงใจ',
+      source: 'rule-fallback',
+    };
+  }
+
+  // 6. Angry / Annoyed / Heated
+  if (
+    t.includes('โมโห') ||
+    t.includes('หัวร้อน') ||
+    t.includes('บ้า') ||
+    t.includes('แย่') ||
+    t.includes('เซ็ง') ||
+    t.includes('โกรธ') ||
+    t.includes('เกรียน') ||
+    t.includes('ด่า') ||
+    t.includes('หงุดหงิด') ||
+    t.includes('โกงว่ะ')
+  ) {
+    return {
+      emotion: 'angry',
+      emotionLabel: '😠 ดุดัน / หัวร้อน',
+      sentiment: 'negative',
+      energy: 8,
+      pitch: 0.90,
+      rate: 1.06,
+      volume: 95,
+      sweetEnding: false,
+      color: '#f97316',
+      explanation: 'ข้อความหัวร้อน ไม่พอใจ หรือโมโห',
+      source: 'rule-fallback',
+    };
+  }
+
+  // 7. Sad / Melancholy
+  if (
+    t.includes('นอยด์') ||
+    t.includes('เศร้า') ||
+    t.includes('เสียใจ') ||
+    t.includes('แง') ||
+    t.includes('เหนื่อย') ||
+    t.includes('ท้อ') ||
+    t.includes('ร้องไห้') ||
+    t.includes('เหงา') ||
+    t.includes('อกหัก')
+  ) {
+    return {
+      emotion: 'sad',
+      emotionLabel: '🥺 เศร้า / นอยด์',
+      sentiment: 'negative',
+      energy: 4,
+      pitch: 0.92,
+      rate: 0.80,
+      volume: 85,
+      sweetEnding: false,
+      color: '#6366f1',
+      explanation: 'ข้อความเศร้า นอยด์ เหนื่อย หรือต้องการการปลอบโยน',
+      source: 'rule-fallback',
+    };
+  }
+
+  // Default: Neutral
+  return {
+    emotion: 'neutral',
+    emotionLabel: '💬 ปกติ / ทั่วไป',
+    sentiment: 'neutral',
+    energy: 5,
+    pitch: 1.05,
+    rate: 0.86,
+    volume: 90,
+    sweetEnding: false,
+    color: '#06b6d4',
+    explanation: 'ข้อความพูดคุยปกติ ถามคำถาม หรือแจ้งข้อมูลทั่วไป',
+    source: 'rule-fallback',
+  };
+}
+
+function applyIntensity(result: EmotionToneResult, intensity: 'gentle' | 'balanced' | 'dramatic'): EmotionToneResult {
+  const factor = intensity === 'gentle' ? 0.6 : intensity === 'dramatic' ? 1.4 : 1.0;
+  const basePitch = 1.05;
+  const baseRate = 0.86;
+
+  const pitchDiff = (result.pitch - basePitch) * factor;
+  const rateDiff = (result.rate - baseRate) * factor;
+
+  return {
+    ...result,
+    pitch: Number(Math.max(0.75, Math.min(1.45, basePitch + pitchDiff)).toFixed(2)),
+    rate: Number(Math.max(0.70, Math.min(1.25, baseRate + rateDiff)).toFixed(2)),
+  };
+}
+
+// Endpoint: Analyze live stream chat emotion using Gemini API (gemini-3.8-flash)
+app.post('/api/analyze-chat-emotion', async (req, res) => {
+  try {
+    const { message, username = 'ผู้ชม', intensity = 'balanced' } = req.body;
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    const trimmedMsg = message.trim();
+    const cacheKey = `${trimmedMsg.toLowerCase()}:${intensity}`;
+
+    if (emotionCache.has(cacheKey)) {
+      return res.json(emotionCache.get(cacheKey));
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      const fallback = applyIntensity(getFallbackEmotion(trimmedMsg), intensity);
+      emotionCache.set(cacheKey, fallback);
+      return res.json(fallback);
+    }
+
+    try {
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          },
+        },
+      });
+
+      const prompt = `วิเคราะห์อารมณ์และน้ำเสียงของข้อความแชทสดในไลฟ์สตรีม:
+ผู้ส่ง: "${username}"
+ข้อความ: "${trimmedMsg}"
+
+จงเลือก emotion ที่ตรงที่สุด 1 ประเภท:
+'joyful' (ดีใจ/สนุก/ขำขัน/555)
+'sweet' (หวาน/อ้อน/น่ารัก/ชื่นชม)
+'excited' (ตื่นเต้น/ไฮป์/เชียร์มันส์)
+'teasing' (แซว/หยอกล้อ/กวนๆ)
+'supportive' (ให้กำลังใจ/ขอบคุณ/ซึ้ง)
+'angry' (หัวร้อน/โมโห/ขัดใจ)
+'sad' (เศร้า/เสียใจ/นอยด์/เหนื่อย)
+'neutral' (ปกติ/ถามคำถามทั่วไป)`;
+
+      const apiPromise = ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              emotion: {
+                type: Type.STRING,
+                description: 'One of: joyful, sweet, excited, teasing, supportive, angry, sad, neutral',
+              },
+              emotionLabel: {
+                type: Type.STRING,
+                description: 'Thai label with emoji, e.g. 😊 ดีใจ / ร่าเริง, 💖 ออดอ้อน / หวานแหวว',
+              },
+              sentiment: {
+                type: Type.STRING,
+                description: 'positive, neutral, or negative',
+              },
+              energy: {
+                type: Type.NUMBER,
+                description: 'Energy score from 1 to 10',
+              },
+              pitch: {
+                type: Type.NUMBER,
+                description: 'TTS pitch between 0.85 and 1.30',
+              },
+              rate: {
+                type: Type.NUMBER,
+                description: 'TTS rate between 0.75 and 1.15',
+              },
+              volume: {
+                type: Type.NUMBER,
+                description: 'Volume between 70 and 100',
+              },
+              sweetEnding: {
+                type: Type.BOOLEAN,
+                description: 'Whether to append sweet particle like ค่า~',
+              },
+              color: {
+                type: Type.STRING,
+                description: 'Hex color string for badge',
+              },
+              explanation: {
+                type: Type.STRING,
+                description: 'Brief Thai explanation of why this emotion was chosen',
+              },
+            },
+            required: ['emotion', 'emotionLabel', 'sentiment', 'energy', 'pitch', 'rate', 'sweetEnding'],
+          },
+        },
+      });
+
+      // 3.5s timeout safeguard for super-fast TTS queue
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3500));
+      const response = (await Promise.race([apiPromise, timeoutPromise])) as any;
+
+      if (response && response.text) {
+        const parsed = JSON.parse(response.text.trim());
+        const validEmotions = ['joyful', 'sweet', 'excited', 'teasing', 'supportive', 'angry', 'sad', 'neutral'];
+        const validatedEmotion = validEmotions.includes(parsed.emotion) ? parsed.emotion : 'neutral';
+
+        const result: EmotionToneResult = {
+          emotion: validatedEmotion,
+          emotionLabel: parsed.emotionLabel || '💬 ปกติ / ทั่วไป',
+          sentiment: parsed.sentiment || 'neutral',
+          energy: Math.max(1, Math.min(10, Number(parsed.energy) || 5)),
+          pitch: Number(parsed.pitch) || 1.05,
+          rate: Number(parsed.rate) || 0.86,
+          volume: Number(parsed.volume) || 90,
+          sweetEnding: Boolean(parsed.sweetEnding),
+          color: parsed.color || '#06b6d4',
+          explanation: parsed.explanation || '',
+          source: 'gemini',
+        };
+
+        const modulated = applyIntensity(result, intensity);
+        if (emotionCache.size > 500) {
+          const firstKey = emotionCache.keys().next().value;
+          if (firstKey) emotionCache.delete(firstKey);
+        }
+        emotionCache.set(cacheKey, modulated);
+        return res.json(modulated);
+      }
+    } catch (geminiError: any) {
+      console.warn('[Gemini Emotion Analysis fallback]:', geminiError?.message || geminiError);
+    }
+
+    // Fallback if Gemini fails or times out
+    const fallback = applyIntensity(getFallbackEmotion(trimmedMsg), intensity);
+    emotionCache.set(cacheKey, fallback);
+    return res.json(fallback);
+  } catch (error: any) {
+    console.error('[API /api/analyze-chat-emotion] Error:', error?.message || error);
+    const fallback = getFallbackEmotion('');
+    return res.json(fallback);
+  }
+});
+
 // Primary AI Text-To-Speech endpoint (Guaranteed 100% Thai Female / Male AI voice)
 app.post('/api/tts', async (req, res) => {
   try {
-    const { text, voice = 'ai_female_google', gender = 'female', speed = 0.86 } = req.body;
+    const { text, voice = 'ai_female_google', gender = 'female', speed = 0.86, pitch = 1.05, emotion } = req.body;
 
     if (!text || typeof text !== 'string') {
       return res.status(400).json({ error: 'Text is required' });
@@ -505,7 +903,7 @@ app.post('/api/tts', async (req, res) => {
       return res.status(400).json({ error: 'Empty text' });
     }
 
-    const cacheKey = `${voice}:${speed}:${trimmedText}`;
+    const cacheKey = `${voice}:${speed}:${pitch}:${emotion || 'default'}:${trimmedText}`;
     if (ttsCache.has(cacheKey)) {
       const cached = ttsCache.get(cacheKey)!;
       res.setHeader('Content-Type', cached.contentType);

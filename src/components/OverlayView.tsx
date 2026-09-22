@@ -29,6 +29,7 @@ import { sounds } from '../utils/soundEffects';
 import { ttsService } from '../utils/ttsService';
 import { IndoFinityClient } from '../services/indofinityService';
 import { realtimeSync } from '../services/realtimeSync';
+import { analyzeChatEmotion } from '../services/geminiEmotionService';
 
 interface OverlayViewProps {
   overlayType: 'leaderboard' | 'chat' | 'gift' | 'follow' | 'share' | 'alerts' | 'subathon' | 'avatars' | 'all';
@@ -101,6 +102,9 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   const ttsVolParam = urlParams.has('ttsvol') ? Number(urlParams.get('ttsvol')) : (savedLocalSettings.chatTtsVolume ?? 90);
   const ttsVoiceParam = urlParams.get('ttsvoice') || savedLocalSettings.chatTtsVoice || 'ai_female_google';
   const ttsSweetParam = urlParams.has('ttssweet') ? urlParams.get('ttssweet') !== '0' : (savedLocalSettings.chatTtsSweetEnding ?? true);
+  const aiEmotionParam = urlParams.has('aiemotion') ? urlParams.get('aiemotion') !== '0' : (savedLocalSettings.chatAiEmotionTtsEnabled ?? true);
+  const emotionBadgeParam = urlParams.has('emotionbadge') ? urlParams.get('emotionbadge') !== '0' : (savedLocalSettings.chatAiEmotionShowBadge ?? true);
+  const emotionIntensityParam = (urlParams.get('emotionintensity') as any) || savedLocalSettings.chatAiEmotionIntensity || 'balanced';
 
   // Follow & Share URL Params
   const followParam = urlParams.has('follow') ? urlParams.get('follow') !== '0' : (savedLocalSettings.followAlertEnabled ?? true);
@@ -154,6 +158,9 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     chatTtsTonePreset: 'sweet',
     chatTtsSkipSpam: true,
     chatTtsSweetEnding: ttsSweetParam,
+    chatAiEmotionTtsEnabled: aiEmotionParam,
+    chatAiEmotionShowBadge: emotionBadgeParam,
+    chatAiEmotionIntensity: emotionIntensityParam,
 
     likeGoal: goalParam,
     currentLikes: 0,
@@ -553,7 +560,18 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
             sounds.playChat();
             setMessages((prev) => [...prev.slice(-25), msg]);
             if (curSettings.chatTtsEnabled) {
-              ttsService.speakChat(msg.username, msg.message);
+              if (msg.emotionTone && curSettings.chatAiEmotionTtsEnabled !== false) {
+                ttsService.speakChat(msg.username, msg.message, {
+                  pitch: msg.emotionTone.pitch,
+                  rate: msg.emotionTone.rate,
+                  volume: msg.emotionTone.volume,
+                  sweetEnding: msg.emotionTone.sweetEnding,
+                  emotion: msg.emotion,
+                  emotionLabel: msg.emotionLabel,
+                });
+              } else {
+                ttsService.speakChat(msg.username, msg.message);
+              }
             }
             break;
           }
@@ -627,15 +645,52 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
 
     client.setCallbacks({
       onStatusChange: (s) => setIndoFinityStatus(s),
-      onChat: (msg) => {
+      onChat: async (incomingMsg) => {
         const curSettings = settingsRef.current;
+        let msg = { ...incomingMsg };
         if (isDuplicateChat(msg)) {
           return;
         }
+
+        if (curSettings.chatAiEmotionTtsEnabled !== false && !msg.emotionLabel) {
+          try {
+            const emo = await analyzeChatEmotion(
+              msg.message,
+              msg.username,
+              curSettings.chatAiEmotionIntensity || 'balanced'
+            );
+            msg = {
+              ...msg,
+              emotion: emo.emotion,
+              emotionLabel: emo.emotionLabel,
+              emotionColor: emo.color,
+              emotionTone: {
+                pitch: emo.pitch,
+                rate: emo.rate,
+                volume: emo.volume,
+                sweetEnding: emo.sweetEnding,
+              },
+            };
+          } catch (e) {
+            console.warn('[OverlayView] Emotion analysis fallback:', e);
+          }
+        }
+
         sounds.playChat();
         setMessages((prev) => [...prev.slice(-20), msg]);
         if (curSettings.chatTtsEnabled) {
-          ttsService.speakChat(msg.username, msg.message);
+          if (msg.emotionTone && curSettings.chatAiEmotionTtsEnabled !== false) {
+            ttsService.speakChat(msg.username, msg.message, {
+              pitch: msg.emotionTone.pitch,
+              rate: msg.emotionTone.rate,
+              volume: msg.emotionTone.volume,
+              sweetEnding: msg.emotionTone.sweetEnding,
+              emotion: msg.emotion,
+              emotionLabel: msg.emotionLabel,
+            });
+          } else {
+            ttsService.speakChat(msg.username, msg.message);
+          }
         }
       },
       onLike: (data) => {

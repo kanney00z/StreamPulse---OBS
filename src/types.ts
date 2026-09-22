@@ -180,6 +180,16 @@ export interface ChatMessage {
   tipAmount?: string;
   avatarRingColor?: string;
   headerColor?: string;
+  // Gemini AI Emotion Analysis
+  emotion?: 'joyful' | 'sweet' | 'excited' | 'teasing' | 'supportive' | 'angry' | 'sad' | 'neutral';
+  emotionLabel?: string;
+  emotionColor?: string;
+  emotionTone?: {
+    pitch: number;
+    rate: number;
+    volume?: number;
+    sweetEnding?: boolean;
+  };
 }
 
 export interface ChatThemeConfig {
@@ -288,6 +298,11 @@ export interface OverlayCustomSettings {
   chatTtsTonePreset: 'normal' | 'male' | 'female-natural' | 'sweet' | 'cute' | 'soft' | 'natural' | 'custom';
   chatTtsSkipSpam: boolean;
   chatTtsSweetEnding: boolean; // เติมเสียงลงท้ายน่ารัก เช่น "ค่า~"
+
+  // Gemini AI Emotion Voice Tone Auto-Tuning
+  chatAiEmotionTtsEnabled: boolean; // ใช้ Gemini API วิเคราะห์อารมณ์จากข้อความแชท แล้วนำมาปรับค่า Voice Tone ของ TTS อัตโนมัติ
+  chatAiEmotionShowBadge: boolean; // แสดงป้ายอารมณ์ (เช่น 😊 ดีใจ, 💖 อ้อน, 🔥 ตื่นเต้น) ในกล่องแชท
+  chatAiEmotionIntensity: 'gentle' | 'balanced' | 'dramatic'; // ระดับความเด่นชัดของอารมณ์เสียง (นุ่มนวล / สมดุล / ชัดเจนตื่นเต้น)
 
   // Like Leaderboard
   likeGoal: number;

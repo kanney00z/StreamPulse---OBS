@@ -69,6 +69,7 @@ import { getIndoFinityClient, IndoFinityClient } from './services/indofinityServ
 import { sounds } from './utils/soundEffects';
 import { ttsService } from './utils/ttsService';
 import { realtimeSync } from './services/realtimeSync';
+import { analyzeChatEmotion } from './services/geminiEmotionService';
 
 export default function App() {
   // Check if opened as standalone OBS Browser Source overlay
@@ -111,6 +112,9 @@ export default function App() {
       chatTtsTonePreset: 'female-natural',
       chatTtsSkipSpam: true,
       chatTtsSweetEnding: false,
+      chatAiEmotionTtsEnabled: true,
+      chatAiEmotionShowBadge: true,
+      chatAiEmotionIntensity: 'balanced',
 
       likeGoal: 20000,
       currentLikes: 0,
@@ -430,7 +434,8 @@ export default function App() {
   const recentChatDeduplicationRef = useRef<Map<string, number>>(new Map());
 
   // Helper to post chat message locally and sync to OBS in real-time
-  const postChatMessage = (msg: ChatMessage) => {
+  const postChatMessage = async (incomingMsg: ChatMessage) => {
+    let msg = { ...incomingMsg };
     const key = `${(msg.username || '').trim().toLowerCase()}:::${(msg.message || '').trim().toLowerCase()}`;
     const now = Date.now();
     const lastSeen = recentChatDeduplicationRef.current.get(key);
@@ -445,6 +450,31 @@ export default function App() {
       }
     }
 
+    // Analyze chat emotion with Gemini API if enabled and not already analyzed
+    if (settingsRef.current.chatAiEmotionTtsEnabled !== false && !msg.emotionLabel) {
+      try {
+        const emo = await analyzeChatEmotion(
+          msg.message,
+          msg.username,
+          settingsRef.current.chatAiEmotionIntensity || 'balanced'
+        );
+        msg = {
+          ...msg,
+          emotion: emo.emotion,
+          emotionLabel: emo.emotionLabel,
+          emotionColor: emo.color,
+          emotionTone: {
+            pitch: emo.pitch,
+            rate: emo.rate,
+            volume: emo.volume,
+            sweetEnding: emo.sweetEnding,
+          },
+        };
+      } catch (err) {
+        console.warn('[App] Emotion analysis non-fatal fallback:', err);
+      }
+    }
+
     sounds.playChat();
     setMessages((prev) => [...prev, msg]);
     realtimeSync.broadcastStreamEvent({
@@ -452,7 +482,18 @@ export default function App() {
       payload: msg,
     });
     if (settingsRef.current.chatTtsEnabled && soundEnabled) {
-      ttsService.speakChat(msg.username, msg.message);
+      if (msg.emotionTone && settingsRef.current.chatAiEmotionTtsEnabled !== false) {
+        ttsService.speakChat(msg.username, msg.message, {
+          pitch: msg.emotionTone.pitch,
+          rate: msg.emotionTone.rate,
+          volume: msg.emotionTone.volume,
+          sweetEnding: msg.emotionTone.sweetEnding,
+          emotion: msg.emotion,
+          emotionLabel: msg.emotionLabel,
+        });
+      } else {
+        ttsService.speakChat(msg.username, msg.message);
+      }
     }
   };
 
