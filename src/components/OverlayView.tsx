@@ -233,6 +233,41 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   const shareTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const indoFinityClientRef = useRef<IndoFinityClient | null>(null);
 
+  // Deduplication caches to prevent double-bouncing (IndoFinity WS + RealtimeSync cross-delivery)
+  const recentChatDeduplicationRef = useRef<Map<string, number>>(new Map());
+  const recentAlertDeduplicationRef = useRef<Map<string, number>>(new Map());
+
+  const isDuplicateChat = (msg: ChatMessage, windowMs: number = 3500): boolean => {
+    const key = `${(msg.username || '').trim().toLowerCase()}:::${(msg.message || '').trim().toLowerCase()}`;
+    const now = Date.now();
+    const lastSeen = recentChatDeduplicationRef.current.get(key);
+    if (lastSeen && now - lastSeen < windowMs) {
+      return true;
+    }
+    recentChatDeduplicationRef.current.set(key, now);
+    if (recentChatDeduplicationRef.current.size > 200) {
+      for (const [k, time] of recentChatDeduplicationRef.current.entries()) {
+        if (now - time > 15000) recentChatDeduplicationRef.current.delete(k);
+      }
+    }
+    return false;
+  };
+
+  const isDuplicateAlert = (signature: string, windowMs: number = 3000): boolean => {
+    const now = Date.now();
+    const lastSeen = recentAlertDeduplicationRef.current.get(signature);
+    if (lastSeen && now - lastSeen < windowMs) {
+      return true;
+    }
+    recentAlertDeduplicationRef.current.set(signature, now);
+    if (recentAlertDeduplicationRef.current.size > 200) {
+      for (const [k, time] of recentAlertDeduplicationRef.current.entries()) {
+        if (now - time > 15000) recentAlertDeduplicationRef.current.delete(k);
+      }
+    }
+    return false;
+  };
+
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const syncNoticeTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -512,6 +547,9 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
         switch (event.type) {
           case 'chat_message': {
             const msg = event.payload;
+            if (isDuplicateChat(msg)) {
+              break;
+            }
             sounds.playChat();
             setMessages((prev) => [...prev.slice(-25), msg]);
             if (curSettings.chatTtsEnabled) {
@@ -521,6 +559,10 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
           }
           case 'gift_alert': {
             const alert = event.payload;
+            const giftSig = `gift:${alert.senderName}:${alert.gift?.name}:${alert.comboCount}`;
+            if (isDuplicateAlert(giftSig)) {
+              break;
+            }
             if (alert.comboCount > 1) {
               sounds.playCombo(alert.comboCount);
             } else {
@@ -539,12 +581,18 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
             }
             break;
           }
-          case 'follow_alert':
+          case 'follow_alert': {
+            const followSig = `follow:${event.payload.username}`;
+            if (isDuplicateAlert(followSig)) break;
             handleFollowAlert(event.payload);
             break;
-          case 'share_alert':
+          }
+          case 'share_alert': {
+            const shareSig = `share:${event.payload.username}`;
+            if (isDuplicateAlert(shareSig)) break;
             handleShareAlert(event.payload);
             break;
+          }
           case 'likes':
             handleAddLikes(event.payload.count || 1, event.payload.user, event.payload.total);
             break;
@@ -581,6 +629,9 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
       onStatusChange: (s) => setIndoFinityStatus(s),
       onChat: (msg) => {
         const curSettings = settingsRef.current;
+        if (isDuplicateChat(msg)) {
+          return;
+        }
         sounds.playChat();
         setMessages((prev) => [...prev.slice(-20), msg]);
         if (curSettings.chatTtsEnabled) {
@@ -597,6 +648,10 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
       },
       onGift: (alert) => {
         const curSettings = settingsRef.current;
+        const giftSig = `gift:${alert.senderName}:${alert.gift?.name}:${alert.comboCount}`;
+        if (isDuplicateAlert(giftSig)) {
+          return;
+        }
         if (alert.comboCount > 1) {
           sounds.playCombo(alert.comboCount);
         } else {
@@ -616,6 +671,8 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
       },
       onFollow: (alert) => {
         const curSettings = settingsRef.current;
+        const followSig = `follow:${alert.username}`;
+        if (isDuplicateAlert(followSig)) return;
         handleFollowAlert(alert);
         if (curSettings.subathonAutoAdd && curSettings.subathonAddPerFollow > 0) {
           handleAddSubathonTime(curSettings.subathonAddPerFollow, 'คนติดตามใหม่', alert.username);
@@ -623,6 +680,8 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
       },
       onShare: (alert) => {
         const curSettings = settingsRef.current;
+        const shareSig = `share:${alert.username}`;
+        if (isDuplicateAlert(shareSig)) return;
         handleShareAlert(alert);
         if (curSettings.subathonAutoAdd && curSettings.subathonAddPerShare > 0) {
           handleAddSubathonTime(curSettings.subathonAddPerShare, 'คนแชร์ไลฟ์', alert.username);

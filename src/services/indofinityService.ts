@@ -127,6 +127,24 @@ export class IndoFinityClient {
   private maxRetries: number = 3;
   private callbacks: IndoFinityCallbacks = {};
   private logs: IndoFinityLogItem[] = [];
+  private recentEventSignatures: Map<string, number> = new Map();
+
+  private isDuplicateEvent(signature: string, windowMs: number = 2500): boolean {
+    const now = Date.now();
+    const lastSeen = this.recentEventSignatures.get(signature);
+    if (lastSeen && now - lastSeen < windowMs) {
+      return true;
+    }
+    this.recentEventSignatures.set(signature, now);
+    if (this.recentEventSignatures.size > 200) {
+      for (const [key, time] of this.recentEventSignatures.entries()) {
+        if (now - time > 15000) {
+          this.recentEventSignatures.delete(key);
+        }
+      }
+    }
+    return false;
+  }
 
   constructor(url: string = DEFAULT_INDOFINITY_WS_URL, autoReconnect: boolean = true) {
     this.url = url;
@@ -162,8 +180,11 @@ export class IndoFinityClient {
   }
 
   public connect(customUrl?: string, resetRetries: boolean = true) {
-    if (customUrl) {
+    if (customUrl && customUrl !== this.url) {
       this.url = customUrl;
+    } else if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      // Already connected or in the process of connecting to this URL
+      return;
     }
 
     if (resetRetries) {
@@ -292,12 +313,19 @@ export class IndoFinityClient {
   public handleIncomingEvent(event: string, eventData: any) {
     const sender = eventData?.nickname || eventData?.uniqueId || 'TikTok Viewer';
 
-    // 1. Chat Event
+    // 1. Chat Event (Deduplicate dual 'chat' and 'comment' messages emitted by IndoFinity)
     if (event === 'chat' || event === 'comment') {
       const data = eventData as IndoFinityChatEventData;
-      const uniqueId = data.uniqueId || 'user';
-      const nickname = data.nickname || `@${uniqueId}`;
-      const comment = data.comment || '';
+      const uniqueId = (data.uniqueId || (data as any).userId || 'user').trim();
+      const nickname = (data.nickname || `@${uniqueId}`).trim();
+      const comment = (data.comment || (data as any).message || '').trim();
+
+      // Deduplication signature: IndoFinity sends both 'comment' and 'chat' on test button click
+      const chatSignature = `chat:${uniqueId.toLowerCase()}:${comment.toLowerCase()}`;
+      if (this.isDuplicateEvent(chatSignature, 2500)) {
+        return;
+      }
+
       const avatarUrl =
         data.profilePictureUrl ||
         data.avatarThumb ||
@@ -316,8 +344,13 @@ export class IndoFinityClient {
       }
       const color = colors[Math.abs(hash) % colors.length];
 
+      // Deterministic ID so cross-tab and OBS can deduplicate accurately
+      const stableMsgId =
+        data.msgId ||
+        `${encodeURIComponent(uniqueId)}_${encodeURIComponent(comment.substring(0, 16))}_${Math.floor(Date.now() / 3000)}`;
+
       const chatMessage: ChatMessage = {
-        id: 'if-chat-' + (data.msgId || Date.now() + '-' + Math.random().toString(36).substring(2, 6)),
+        id: 'if-chat-' + stableMsgId,
         username: nickname,
         avatarUrl,
         message: comment,
@@ -337,8 +370,14 @@ export class IndoFinityClient {
     else if (event === 'like') {
       const data = eventData as IndoFinityLikeEventData;
       const count = Number(data.likeCount) || 1;
-      const uniqueId = data.uniqueId || 'viewer';
-      const nickname = data.nickname || `@${uniqueId}`;
+      const uniqueId = (data.uniqueId || 'viewer').trim();
+      const nickname = (data.nickname || `@${uniqueId}`).trim();
+
+      const likeSignature = `like:${uniqueId.toLowerCase()}:${count}:${Math.floor(Date.now() / 1500)}`;
+      if (this.isDuplicateEvent(likeSignature, 1500)) {
+        return;
+      }
+
       const avatar =
         data.profilePictureUrl ||
         `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(uniqueId)}`;
@@ -368,17 +407,22 @@ export class IndoFinityClient {
     // 3. Gift Event
     else if (event === 'gift') {
       const data = eventData as IndoFinityGiftEventData;
-      const uniqueId = data.uniqueId || 'supporter';
-      const nickname = data.nickname || `@${uniqueId}`;
+      const uniqueId = (data.uniqueId || 'supporter').trim();
+      const nickname = (data.nickname || `@${uniqueId}`).trim();
+      const combo = Number(data.repeatCount || data.combo || data.repeat_count || 1);
+      const giftItem = mapIndoFinityGift(data);
+
+      const giftSignature = `gift:${uniqueId.toLowerCase()}:${giftItem.name}:${combo}:${Math.floor(Date.now() / 2000)}`;
+      if (this.isDuplicateEvent(giftSignature, 2000)) {
+        return;
+      }
+
       const avatar =
         data.profilePictureUrl ||
         `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(uniqueId)}`;
 
-      const combo = Number(data.repeatCount || data.combo || data.repeat_count || 1);
-      const giftItem = mapIndoFinityGift(data);
-
       const alert: GiftAlert = {
-        id: 'if-gift-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        id: 'if-gift-' + ((data as any).groupId || `${uniqueId}_${giftItem.id}_${combo}_${Math.floor(Date.now() / 2000)}`),
         senderName: nickname,
         senderAvatar: avatar,
         gift: giftItem,
@@ -396,8 +440,14 @@ export class IndoFinityClient {
 
     // 4. Follow Event
     else if (event === 'follow') {
-      const uniqueId = eventData?.uniqueId || 'viewer';
-      const nickname = eventData?.nickname || `@${uniqueId}`;
+      const uniqueId = (eventData?.uniqueId || 'viewer').trim();
+      const nickname = (eventData?.nickname || `@${uniqueId}`).trim();
+
+      const followSignature = `follow:${uniqueId.toLowerCase()}:${Math.floor(Date.now() / 3000)}`;
+      if (this.isDuplicateEvent(followSignature, 3000)) {
+        return;
+      }
+
       const avatarUrl =
         eventData?.profilePictureUrl ||
         eventData?.avatarThumb ||
@@ -405,7 +455,7 @@ export class IndoFinityClient {
         `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80`;
 
       const followAlert: FollowAlert = {
-        id: 'follow-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        id: 'follow-' + `${uniqueId}_${Math.floor(Date.now() / 3000)}`,
         username: nickname,
         avatarUrl,
         timestamp: Date.now(),
@@ -421,8 +471,14 @@ export class IndoFinityClient {
 
     // 5. Share Event
     else if (event === 'share') {
-      const uniqueId = eventData?.uniqueId || 'viewer';
-      const nickname = eventData?.nickname || `@${uniqueId}`;
+      const uniqueId = (eventData?.uniqueId || 'viewer').trim();
+      const nickname = (eventData?.nickname || `@${uniqueId}`).trim();
+
+      const shareSignature = `share:${uniqueId.toLowerCase()}:${Math.floor(Date.now() / 3000)}`;
+      if (this.isDuplicateEvent(shareSignature, 3000)) {
+        return;
+      }
+
       const avatarUrl =
         eventData?.profilePictureUrl ||
         eventData?.avatarThumb ||
@@ -430,7 +486,7 @@ export class IndoFinityClient {
         `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80`;
 
       const shareAlert: ShareAlert = {
-        id: 'share-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        id: 'share-' + `${uniqueId}_${Math.floor(Date.now() / 3000)}`,
         username: nickname,
         avatarUrl,
         timestamp: Date.now(),

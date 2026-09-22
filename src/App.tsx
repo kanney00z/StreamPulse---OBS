@@ -426,8 +426,25 @@ export default function App() {
     });
   };
 
+  // Deduplication cache for chat messages to avoid duplicates
+  const recentChatDeduplicationRef = useRef<Map<string, number>>(new Map());
+
   // Helper to post chat message locally and sync to OBS in real-time
   const postChatMessage = (msg: ChatMessage) => {
+    const key = `${(msg.username || '').trim().toLowerCase()}:::${(msg.message || '').trim().toLowerCase()}`;
+    const now = Date.now();
+    const lastSeen = recentChatDeduplicationRef.current.get(key);
+    if (lastSeen && now - lastSeen < 3000) {
+      console.log('[App] Dropped duplicate chat message:', msg.username, msg.message);
+      return;
+    }
+    recentChatDeduplicationRef.current.set(key, now);
+    if (recentChatDeduplicationRef.current.size > 200) {
+      for (const [k, time] of recentChatDeduplicationRef.current.entries()) {
+        if (now - time > 15000) recentChatDeduplicationRef.current.delete(k);
+      }
+    }
+
     sounds.playChat();
     setMessages((prev) => [...prev, msg]);
     realtimeSync.broadcastStreamEvent({
@@ -785,13 +802,13 @@ export default function App() {
       },
     });
 
-    // Auto connect to ws://localhost:62024
+    // Auto connect to ws://localhost:62024 once
     client.connect();
 
     return () => {
       // Don't kill client permanently, just unhook if unmounted
     };
-  }, [settings.giftDuration, settings.followDuration, settings.shareDuration]);
+  }, []);
 
   // Auto stream simulation loop
   useEffect(() => {
