@@ -125,8 +125,8 @@ export async function analyzeChatEmotion(
       clientEmotionCache.set(cacheKey, data);
       return data;
     }
-  } catch (err) {
-    console.warn('[Gemini Emotion Client] Fetch error, falling back locally:', err);
+  } catch {
+    // Fast fallback to local rule-based engine
   }
 
   // Fast client-side fallback

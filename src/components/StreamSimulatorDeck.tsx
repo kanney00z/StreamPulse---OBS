@@ -15,6 +15,9 @@ import {
   Share2,
   RotateCcw,
   Users,
+  Coffee,
+  Music,
+  Utensils,
 } from 'lucide-react';
 import { GIFT_ITEMS, SIMULATION_NAMES, RANDOM_CHAT_PHRASES } from '../data/mockData';
 import { GiftItem } from '../types';
@@ -49,6 +52,11 @@ interface StreamSimulatorDeckProps {
   onUpdateViewerCount?: (count: number) => void;
   onTriggerAvatarJump?: () => void;
   onTriggerAvatarCheer?: () => void;
+  avatarCurrentAnimation?: 'idle' | 'dancing' | 'eating' | 'walk' | null;
+  onTriggerAvatarAction?: (action: 'idle' | 'dancing' | 'eating' | 'walk') => void;
+  onTriggerAvatarIdle?: () => void;
+  onTriggerAvatarDance?: () => void;
+  onTriggerAvatarEat?: () => void;
   isAutoSimulating: boolean;
   onToggleAutoSim: () => void;
   soundEnabled: boolean;
@@ -72,6 +80,11 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
   onUpdateViewerCount,
   onTriggerAvatarJump,
   onTriggerAvatarCheer,
+  avatarCurrentAnimation,
+  onTriggerAvatarAction,
+  onTriggerAvatarIdle,
+  onTriggerAvatarDance,
+  onTriggerAvatarEat,
   isAutoSimulating,
   onToggleAutoSim,
   soundEnabled,
@@ -84,6 +97,21 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
   const [lastGiftId, setLastGiftId] = useState<string | null>(null);
   const [comboCount, setComboCount] = useState(1);
   const [lastGiftTimestamp, setLastGiftTimestamp] = useState(0);
+  const [localAnimation, setLocalAnimation] = useState<'idle' | 'dancing' | 'eating' | null>(null);
+
+  const activeAnimation = avatarCurrentAnimation !== undefined ? avatarCurrentAnimation : localAnimation;
+
+  const handleToggleAnimation = (anim: 'idle' | 'dancing' | 'eating') => {
+    const next = activeAnimation === anim ? null : anim;
+    setLocalAnimation(next);
+    const target = next || 'walk';
+    if (onTriggerAvatarAction) {
+      onTriggerAvatarAction(target);
+    }
+    if (target === 'idle') onTriggerAvatarIdle?.();
+    else if (target === 'dancing') onTriggerAvatarDance?.();
+    else if (target === 'eating') onTriggerAvatarEat?.();
+  };
 
   const handleGiftClick = (gift: GiftItem) => {
     const now = Date.now();
@@ -543,7 +571,69 @@ export const StreamSimulatorDeck: React.FC<StreamSimulatorDeckProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5">
+            {/* Manual Animation Toggles: Idle, Dancing, Eating */}
+            <div className="pt-2 border-t border-white/10 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-pink-300 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-pink-400" />
+                  สลับท่าทาง (Animation Toggles):
+                </span>
+                {activeAnimation && (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-pink-500/25 text-pink-200 border border-pink-500/40 font-bold uppercase animate-pulse">
+                    {activeAnimation}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-3 gap-1.5">
+                {/* 1. Idle Button */}
+                <button
+                  type="button"
+                  onClick={() => handleToggleAnimation('idle')}
+                  className={`py-1.5 px-1 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer shadow-sm ${
+                    activeAnimation === 'idle'
+                      ? 'bg-amber-500/35 border-amber-400 text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.4)] ring-1 ring-amber-400'
+                      : 'bg-slate-900 border-white/10 hover:border-amber-400/50 text-slate-300 hover:text-amber-200'
+                  }`}
+                  title="สั่งให้ตัวละครยืนพักชิลๆ (Idle Animation)"
+                >
+                  <Coffee className="w-3 h-3 text-amber-400" />
+                  <span>Idle (พัก)</span>
+                </button>
+
+                {/* 2. Dancing Button */}
+                <button
+                  type="button"
+                  onClick={() => handleToggleAnimation('dancing')}
+                  className={`py-1.5 px-1 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer shadow-sm ${
+                    activeAnimation === 'dancing'
+                      ? 'bg-fuchsia-500/35 border-fuchsia-400 text-fuchsia-100 shadow-[0_0_12px_rgba(217,70,239,0.4)] ring-1 ring-fuchsia-400'
+                      : 'bg-slate-900 border-white/10 hover:border-fuchsia-400/50 text-pink-300 hover:text-fuchsia-200'
+                  }`}
+                  title="สั่งให้ตัวละครเต้นตามเพลง (Dancing Animation)"
+                >
+                  <Music className="w-3 h-3 text-pink-400" />
+                  <span>Dancing (เต้น)</span>
+                </button>
+
+                {/* 3. Eating Button */}
+                <button
+                  type="button"
+                  onClick={() => handleToggleAnimation('eating')}
+                  className={`py-1.5 px-1 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer shadow-sm ${
+                    activeAnimation === 'eating'
+                      ? 'bg-emerald-500/35 border-emerald-400 text-emerald-100 shadow-[0_0_12px_rgba(16,185,129,0.4)] ring-1 ring-emerald-400'
+                      : 'bg-slate-900 border-white/10 hover:border-emerald-400/50 text-emerald-300 hover:text-emerald-200'
+                  }`}
+                  title="สั่งให้ตัวละครกินขนมของอร่อย (Eating Animation)"
+                >
+                  <Utensils className="w-3 h-3 text-emerald-400" />
+                  <span>Eating (กิน)</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 pt-1">
               <button
                 type="button"
                 onClick={onTriggerAvatarJump}

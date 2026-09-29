@@ -9,7 +9,18 @@ import {
   ShareAlert,
 } from '../types';
 import { StreamAvatarSprite } from './StreamAvatarSprites';
-import { Heart, Sparkles, MessageCircle, UserPlus, Share2, UserCheck, PlusCircle } from 'lucide-react';
+import {
+  Heart,
+  Sparkles,
+  MessageCircle,
+  UserPlus,
+  Share2,
+  UserCheck,
+  PlusCircle,
+  Music,
+  Utensils,
+  Coffee,
+} from 'lucide-react';
 
 interface StreamAvatarsOverlayProps {
   settings: OverlayCustomSettings;
@@ -21,6 +32,10 @@ interface StreamAvatarsOverlayProps {
   totalLikes?: number;
   isOBSMode?: boolean;
   onAddViewer?: () => void;
+  manualActionTrigger?: {
+    action: StreamAvatarAction;
+    timestamp: number;
+  } | null;
 }
 
 // Preset Thai / Global streamer viewer names & colors
@@ -93,6 +108,7 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
   totalLikes = 0,
   isOBSMode = false,
   onAddViewer,
+  manualActionTrigger,
 }) => {
   // Target viewer count strictly respects 0 (0 = no viewers, avatars leave/disappear)
   const targetViewerCount =
@@ -245,7 +261,108 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
     });
   }, [targetViewerCount, settings.avatarStyle]);
 
-  // Handle incoming chat messages -> Trigger speech bubble & support !spawn command
+  // Handle manual animation toggles from StreamSimulatorDeck (Idle, Dancing, Eating, Walk, etc.)
+  const prevTriggerTimestampRef = useRef<number>(0);
+  useEffect(() => {
+    if (!manualActionTrigger || manualActionTrigger.timestamp === prevTriggerTimestampRef.current) return;
+    prevTriggerTimestampRef.current = manualActionTrigger.timestamp;
+
+    const action = manualActionTrigger.action;
+    const isShibaTheme = settings.avatarStyle === 'shiba-squad';
+
+    setAvatars((prev) => {
+      if (prev.length === 0) return prev;
+      return prev.map((av, idx) => {
+        if (av.isLeaving) return av;
+
+        if (action === 'idle') {
+          const idleSpeeches = [
+            'ยืนพักชิลๆ ดูสตรีมฮะ~ ☕',
+            'พักผ่อนตามสบาย 🌸',
+            'สตรีมนี้สนุกจัง ยืนดูเพลินเลย ✨',
+            'รอติดตามรอบถัดไปอยู่น้า 🎮',
+          ];
+          return {
+            ...av,
+            action: 'idle',
+            vx: 0,
+            vy: 0,
+            yOffset: 0,
+            actionTimer: 9999, // Stays in state until toggled or event
+            celebrating: false,
+            speechBubble: settings.avatarShowChatBubbles
+              ? { text: idleSpeeches[idx % idleSpeeches.length], timestamp: Date.now() }
+              : undefined,
+          };
+        }
+
+        if (action === 'dancing' || action === 'dance') {
+          const danceSpeeches = [
+            'แดนซ์กระจายย! 💃🎶',
+            'จังหวะมันส์ม๊ากก 🕺✨',
+            'ตื๊ดๆๆ เต้นตามเพลง 🎧🎵',
+            'ปาร์ตี้กันทุกคนนน! 🥳✨',
+          ];
+          return {
+            ...av,
+            action: 'dancing',
+            vx: 0,
+            vy: -16 - (idx % 3) * 5,
+            yOffset: -1,
+            actionTimer: 9999,
+            celebrating: true,
+            speechBubble: settings.avatarShowChatBubbles
+              ? { text: danceSpeeches[idx % danceSpeeches.length], timestamp: Date.now() }
+              : undefined,
+          };
+        }
+
+        if (action === 'eating' || action === 'eat') {
+          const snacks = isShibaTheme
+            ? ['🍖 กระดูกชิ้นโต', '🧋 ชานมไข่มุก', '🍙 โอนิกิริ', '🍜 ราเมง', '🍡 ดังโงะ']
+            : ['🍔 เบอร์เกอร์', '🍰 เค้กสตรอว์เบอร์รี', '🍕 พิซซ่าชีส', '🧋 ชานม', '🥕 แครอทกรอบ'];
+          const snack = snacks[idx % snacks.length];
+          return {
+            ...av,
+            action: 'eating',
+            vx: 0,
+            vy: 0,
+            yOffset: 0,
+            actionTimer: 9999,
+            celebrating: false,
+            speechBubble: settings.avatarShowChatBubbles
+              ? { text: `ง่ำๆ ได้กิน ${snack} แล้ว! 😋✨`, timestamp: Date.now() }
+              : undefined,
+          };
+        }
+
+        if (action === 'walk') {
+          return {
+            ...av,
+            action: 'walk',
+            actionTimer: Math.random() * 5 + 3,
+            targetX: Math.min(92, Math.max(8, av.x + (Math.random() * 24 - 12))),
+            celebrating: false,
+          };
+        }
+
+        if (action === 'jump') {
+          return {
+            ...av,
+            action: 'jump',
+            vy: -24 - Math.random() * 8,
+            yOffset: -1,
+            actionTimer: 3,
+            celebrating: true,
+          };
+        }
+
+        return av;
+      });
+    });
+  }, [manualActionTrigger, settings.avatarStyle, settings.avatarShowChatBubbles]);
+
+  // Handle incoming chat messages -> Trigger speech bubble & support !spawn, !dance, !eat, !idle commands
   useEffect(() => {
     if (!lastMessage) return;
     if (prevMsgIdRef.current === lastMessage.id) return;
@@ -257,6 +374,27 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
       lowerMsg.startsWith('!spawn') ||
       lowerMsg.startsWith('!shiba') ||
       lowerMsg.startsWith('!join');
+
+    const isDanceCmd =
+      lowerMsg.startsWith('!dance') ||
+      lowerMsg.startsWith('!dancing') ||
+      lowerMsg.startsWith('!เต้น');
+
+    const isEatCmd =
+      lowerMsg.startsWith('!eat') ||
+      lowerMsg.startsWith('!eating') ||
+      lowerMsg.startsWith('!food') ||
+      lowerMsg.startsWith('!feed') ||
+      lowerMsg.startsWith('!กิน') ||
+      lowerMsg.startsWith('!หม่ำ') ||
+      lowerMsg.startsWith('!ป้อน');
+
+    const isIdleCmd =
+      lowerMsg.startsWith('!idle') ||
+      lowerMsg.startsWith('!sit') ||
+      lowerMsg.startsWith('!rest') ||
+      lowerMsg.startsWith('!พัก') ||
+      lowerMsg.startsWith('!ชิล');
 
     const authorRaw =
       lastMessage.username || (lastMessage as any).user?.name || 'Viewer';
@@ -327,6 +465,85 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
 
       if (prev.length === 0) return prev;
 
+      // If !dance command: trigger dancing state for talking avatar and adjacent avatars
+      if (isDanceCmd) {
+        return prev.map((a, i) => {
+          if (targetIndex !== -1 && i === targetIndex) {
+            return {
+              ...a,
+              action: 'dancing',
+              vy: -22,
+              yOffset: -1,
+              celebrating: true,
+              actionTimer: 5,
+              speechBubble: settings.avatarShowChatBubbles
+                ? { text: `!dance โยกตามจังหวะเพลง! 💃🎶`, timestamp: Date.now() }
+                : undefined,
+            };
+          }
+          if (Math.random() < 0.6) {
+            return {
+              ...a,
+              action: 'dancing',
+              vy: -18,
+              yOffset: -1,
+              celebrating: true,
+              actionTimer: 4,
+            };
+          }
+          return a;
+        });
+      }
+
+      // If !eat command: trigger eating state for avatar
+      if (isEatCmd) {
+        return prev.map((a, i) => {
+          if (targetIndex !== -1 && i === targetIndex) {
+            return {
+              ...a,
+              action: 'eating',
+              vx: 0,
+              vy: 0,
+              yOffset: 0,
+              actionTimer: 5,
+              speechBubble: settings.avatarShowChatBubbles
+                ? { text: `!eat ง่ำๆๆ กินขนมอร่อยมากก 🍖😋`, timestamp: Date.now() }
+                : undefined,
+            };
+          }
+          if (Math.random() < 0.4) {
+            return {
+              ...a,
+              action: 'eating',
+              vx: 0,
+              vy: 0,
+              actionTimer: 4,
+            };
+          }
+          return a;
+        });
+      }
+
+      // If !idle command: trigger idle state for avatar
+      if (isIdleCmd) {
+        return prev.map((a, i) => {
+          if (targetIndex !== -1 && i === targetIndex) {
+            return {
+              ...a,
+              action: 'idle',
+              vx: 0,
+              vy: 0,
+              yOffset: 0,
+              actionTimer: 6,
+              speechBubble: settings.avatarShowChatBubbles
+                ? { text: `!idle ขอยืนพักชิลๆ แป๊บน้า ☕`, timestamp: Date.now() }
+                : undefined,
+            };
+          }
+          return a;
+        });
+      }
+
       if (targetIndex === -1) {
         targetIndex = Math.floor(Math.random() * prev.length);
       }
@@ -351,7 +568,7 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
     });
   }, [lastMessage, settings.avatarShowChatBubbles, settings.avatarStyle]);
 
-  // Handle Likes reaction -> All avatars jump & float hearts
+  // Handle Likes reaction -> All avatars jump & float hearts, trigger dancing
   useEffect(() => {
     if (totalLikes > prevLikesRef.current && settings.avatarShowLikesReaction) {
       const diff = totalLikes - prevLikesRef.current;
@@ -373,16 +590,18 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
         setFloatingHearts((prev) => [...prev.slice(-15), ...heartsToAdd]);
       }
 
-      // Small natural parabolic hop for some avatars
+      // Small natural parabolic hop & trigger dancing for some avatars on like burst
       setAvatars((prev) =>
         prev.map((a) => {
           if (Math.random() < 0.6) {
+            const willDance = diff >= 20 || Math.random() < 0.45;
             return {
               ...a,
-              action: 'jump',
+              action: willDance ? 'dancing' : 'jump',
               vy: -18 - Math.random() * 10,
               yOffset: -1,
-              actionTimer: 1.6,
+              actionTimer: willDance ? 4 : 1.6,
+              celebrating: true,
             };
           }
           return a;
@@ -393,7 +612,7 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
     }
   }, [totalLikes, settings.avatarShowLikesReaction, avatars.length]);
 
-  // Handle Gift Alert -> Avatars cheer & dance!
+  // Handle Gift Alert -> Food gifts trigger 'Eating', Celebration gifts trigger 'Dancing'
   useEffect(() => {
     if (!lastGift || !settings.avatarShowGiftsReaction) return;
     if (prevGiftIdRef.current === lastGift.id) return;
@@ -412,18 +631,51 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
       },
     ]);
 
-    // All avatars jump and celebrate with smooth parabolic physics!
+    // Check if gift is food / beverage / treat
+    const titleLower = giftTitle.toLowerCase();
+    const isFoodGift =
+      titleLower.includes('ชา') ||
+      titleLower.includes('เค้ก') ||
+      titleLower.includes('ขนม') ||
+      titleLower.includes('กาแฟ') ||
+      titleLower.includes('ไอติม') ||
+      titleLower.includes('ไก่') ||
+      titleLower.includes('boba') ||
+      titleLower.includes('cake') ||
+      titleLower.includes('coffee') ||
+      titleLower.includes('snack') ||
+      titleLower.includes('pizza') ||
+      titleLower.includes('ice') ||
+      titleLower.includes('donut') ||
+      (lastGift.gift?.coinValue !== undefined && lastGift.gift.coinValue <= 50);
+
+    // Food gifts trigger 'eating' snacks, Party/celebration gifts trigger 'dancing'!
     setAvatars((prev) =>
-      prev.map((a) => ({
-        ...a,
-        action: Math.random() > 0.4 ? 'dance' : 'cheer',
-        vy: -22 - Math.random() * 12,
-        yOffset: -1,
-        celebrating: true,
-        actionTimer: 4.5,
-      }))
+      prev.map((a, idx) => {
+        const action: StreamAvatarAction = isFoodGift
+          ? idx % 3 === 0 ? 'dancing' : 'eating'
+          : idx % 3 === 0 ? 'eating' : 'dancing';
+
+        return {
+          ...a,
+          action,
+          vy: action === 'dancing' ? -20 - Math.random() * 8 : 0,
+          yOffset: action === 'dancing' ? -1 : 0,
+          celebrating: true,
+          actionTimer: 5,
+          speechBubble: settings.avatarShowChatBubbles
+            ? {
+                text:
+                  action === 'eating'
+                    ? `ง่ำๆ ขอบคุณสำหรับ ${giftTitle} จาก ${sender}! 🍖😋`
+                    : `เต้นฉลอง ${giftTitle} ให้ ${sender}! 💃🎶`,
+                timestamp: Date.now(),
+              }
+            : undefined,
+        };
+      })
     );
-  }, [lastGift, settings.avatarShowGiftsReaction]);
+  }, [lastGift, settings.avatarShowGiftsReaction, settings.avatarShowChatBubbles]);
 
   // Handle Follower Alert -> Spawn or celebrate Follower Avatar! ("พวกกดติดตาม")
   useEffect(() => {
@@ -691,7 +943,7 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
             celebrating = false;
             const roll = Math.random();
 
-            if (roll < 0.62) {
+            if (roll < 0.52) {
               // Natural wander: short to medium strolls, like real mini companions
               action = 'walk';
               // 75% wander nearby (7% to 18%), 25% explore slightly further (18% to 32%)
@@ -707,20 +959,27 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
 
               targetX = Math.round(newTarget * 10) / 10;
               actionTimer = Math.random() * 6 + 3.5;
-            } else if (roll < 0.88) {
+            } else if (roll < 0.72) {
               // Idle: pause in place, look around, breathe
               action = 'idle';
               actionTimer = Math.random() * 4.5 + 2.5;
-            } else if (roll < 0.96 && settings.avatarAllowCheer) {
+            } else if (roll < 0.85) {
+              // Happy little wiggle / dancing
+              action = 'dancing';
+              actionTimer = Math.random() * 4 + 2;
+            } else if (roll < 0.95) {
+              // Snacking / eating delicious treats
+              action = 'eating';
+              actionTimer = Math.random() * 4 + 2.5;
+            } else if (settings.avatarAllowCheer) {
               // Cute hop / jump
               action = 'jump';
               vy = -24 - Math.random() * 8;
               yOffset = -1;
               actionTimer = Math.random() * 2 + 1;
             } else {
-              // Happy little wiggle / dance
-              action = 'dance';
-              actionTimer = Math.random() * 3 + 1.5;
+              action = 'idle';
+              actionTimer = 3;
             }
           }
 
@@ -899,7 +1158,12 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
         {/* Render each Viewer Avatar */}
         {avatars.map((avatar) => {
           const isJumping = avatar.yOffset < -1;
-          const isDancing = avatar.action === 'dance' || avatar.action === 'cheer';
+          const isDancing =
+            avatar.action === 'dance' ||
+            avatar.action === 'dancing' ||
+            avatar.action === 'cheer';
+          const isEating = avatar.action === 'eat' || avatar.action === 'eating';
+          const isIdle = avatar.action === 'idle';
           const isWalking = avatar.action === 'walk' && Math.abs(avatar.vx) > 0.2;
           // Step cycle advances only when moving; when stopped, feet remain planted
           const avatarStepFrame = isWalking
@@ -927,6 +1191,10 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
                         ? 'bg-amber-50 text-slate-900 border-amber-400'
                         : avatar.isSpecialEvent === 'share'
                         ? 'bg-cyan-50 text-slate-900 border-cyan-400'
+                        : isEating
+                        ? 'bg-emerald-50 text-slate-900 border-emerald-400'
+                        : isDancing
+                        ? 'bg-fuchsia-50 text-slate-900 border-fuchsia-400'
                         : 'bg-white text-slate-900 border-pink-400'
                     }`}
                   >
@@ -940,6 +1208,10 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
                           ? 'border-t-amber-50'
                           : avatar.isSpecialEvent === 'share'
                           ? 'border-t-cyan-50'
+                          : isEating
+                          ? 'border-t-emerald-50'
+                          : isDancing
+                          ? 'border-t-fuchsia-50'
                           : 'border-t-white'
                       }`}
                     />
@@ -966,8 +1238,38 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
                 </div>
               )}
 
+              {/* Dancing Overhead Badge & Musical Note */}
+              {!avatar.isSpecialEvent && isDancing && (
+                <div className="absolute -top-7 flex items-center gap-1 text-fuchsia-400 animate-bounce">
+                  <Music className="w-3.5 h-3.5 text-pink-300 animate-pulse" />
+                  <span className="text-[9.5px] font-black tracking-wider text-pink-300 uppercase drop-shadow">
+                    DANCING 💃
+                  </span>
+                </div>
+              )}
+
+              {/* Eating Treats Overhead Badge */}
+              {!avatar.isSpecialEvent && isEating && (
+                <div className="absolute -top-7 flex items-center gap-1 text-emerald-400 animate-pulse">
+                  <Utensils className="w-3.5 h-3.5 text-emerald-300" />
+                  <span className="text-[9.5px] font-black tracking-wider text-emerald-300 uppercase drop-shadow">
+                    EATING 😋
+                  </span>
+                </div>
+              )}
+
+              {/* Idle Calm Relaxation Badge (when explicitly active or resting) */}
+              {!avatar.isSpecialEvent && !isDancing && !isEating && isIdle && avatar.actionTimer > 300 && (
+                <div className="absolute -top-6 flex items-center gap-1 text-amber-300/80">
+                  <Coffee className="w-3 h-3 text-amber-300" />
+                  <span className="text-[8.5px] font-bold tracking-wider text-amber-200">
+                    IDLE ☕
+                  </span>
+                </div>
+              )}
+
               {/* Celebrating Sparkle / Hearts indicator */}
-              {!avatar.isSpecialEvent && avatar.celebrating && (
+              {!avatar.isSpecialEvent && !isDancing && !isEating && avatar.celebrating && (
                 <div className="absolute -top-6 flex items-center gap-1 text-pink-400 animate-bounce">
                   <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
                   <span className="text-[10px] font-black tracking-wider text-pink-300">
@@ -1009,7 +1311,13 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
               {/* Character Animated Sprite */}
               <div
                 className={`relative ${
-                  isDancing ? 'animate-bounce' : isJumping ? 'drop-shadow-lg' : ''
+                  isDancing
+                    ? 'animate-bounce'
+                    : isEating
+                    ? 'animate-pulse'
+                    : isJumping
+                    ? 'drop-shadow-lg'
+                    : ''
                 }`}
               >
                 <StreamAvatarSprite

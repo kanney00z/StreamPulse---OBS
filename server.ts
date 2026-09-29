@@ -326,10 +326,23 @@ app.get('/api/sync/events', (req, res) => {
 
   const clientId = (req.query.sessionId as string) || Math.random().toString(36).substring(2, 9);
   const clientType = (req.query.type as string) || 'unknown';
+  const overlayType = (req.query.overlay as string) || '';
   const client: SSEClient = { id: clientId, res, clientType, joinedAt: Date.now() };
 
   sseClients.add(client);
   console.log(`[Realtime SSE] Client connected: ${clientId} (${clientType}). Total active: ${sseClients.size}`);
+
+  if (clientType === 'obs') {
+    const obsCount = Array.from(sseClients).filter((c) => c.clientType === 'obs').length;
+    broadcastSSE('obs_connection', {
+      status: 'connected',
+      clientId,
+      clientType,
+      overlayType,
+      obsCount,
+      timestamp: Date.now(),
+    });
+  }
 
   // Send initial full snapshot immediately
   res.write(`event: init\ndata: ${JSON.stringify(currentSyncState)}\n\n: init-flush\n\n`);
@@ -340,6 +353,17 @@ app.get('/api/sync/events', (req, res) => {
   req.on('close', () => {
     sseClients.delete(client);
     console.log(`[Realtime SSE] Client disconnected: ${clientId}. Remaining: ${sseClients.size}`);
+    if (clientType === 'obs') {
+      const obsCount = Array.from(sseClients).filter((c) => c.clientType === 'obs').length;
+      broadcastSSE('obs_connection', {
+        status: 'disconnected',
+        clientId,
+        clientType,
+        overlayType,
+        obsCount,
+        timestamp: Date.now(),
+      });
+    }
   });
 });
 
@@ -789,63 +813,77 @@ app.post('/api/analyze-chat-emotion', async (req, res) => {
 'sad' (เศร้า/เสียใจ/นอยด์/เหนื่อย)
 'neutral' (ปกติ/ถามคำถามทั่วไป)`;
 
-      const apiPromise = ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              emotion: {
-                type: Type.STRING,
-                description: 'One of: joyful, sweet, excited, teasing, supportive, angry, sad, neutral',
-              },
-              emotionLabel: {
-                type: Type.STRING,
-                description: 'Thai label with emoji, e.g. 😊 ดีใจ / ร่าเริง, 💖 ออดอ้อน / หวานแหวว',
-              },
-              sentiment: {
-                type: Type.STRING,
-                description: 'positive, neutral, or negative',
-              },
-              energy: {
-                type: Type.NUMBER,
-                description: 'Energy score from 1 to 10',
-              },
-              pitch: {
-                type: Type.NUMBER,
-                description: 'TTS pitch between 0.85 and 1.30',
-              },
-              rate: {
-                type: Type.NUMBER,
-                description: 'TTS rate between 0.75 and 1.15',
-              },
-              volume: {
-                type: Type.NUMBER,
-                description: 'Volume between 70 and 100',
-              },
-              sweetEnding: {
-                type: Type.BOOLEAN,
-                description: 'Whether to append sweet particle like ค่า~',
-              },
-              color: {
-                type: Type.STRING,
-                description: 'Hex color string for badge',
-              },
-              explanation: {
-                type: Type.STRING,
-                description: 'Brief Thai explanation of why this emotion was chosen',
+      const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+      let response: any = null;
+
+      for (const modelName of candidateModels) {
+        try {
+          const apiPromise = ai.models.generateContent({
+            model: modelName,
+            contents: prompt,
+            config: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  emotion: {
+                    type: Type.STRING,
+                    description: 'One of: joyful, sweet, excited, teasing, supportive, angry, sad, neutral',
+                  },
+                  emotionLabel: {
+                    type: Type.STRING,
+                    description: 'Thai label with emoji, e.g. 😊 ดีใจ / ร่าเริง, 💖 ออดอ้อน / หวานแหวว',
+                  },
+                  sentiment: {
+                    type: Type.STRING,
+                    description: 'positive, neutral, or negative',
+                  },
+                  energy: {
+                    type: Type.NUMBER,
+                    description: 'Energy score from 1 to 10',
+                  },
+                  pitch: {
+                    type: Type.NUMBER,
+                    description: 'TTS pitch between 0.85 and 1.30',
+                  },
+                  rate: {
+                    type: Type.NUMBER,
+                    description: 'TTS rate between 0.75 and 1.15',
+                  },
+                  volume: {
+                    type: Type.NUMBER,
+                    description: 'Volume between 70 and 100',
+                  },
+                  sweetEnding: {
+                    type: Type.BOOLEAN,
+                    description: 'Whether to append sweet particle like ค่า~',
+                  },
+                  color: {
+                    type: Type.STRING,
+                    description: 'Hex color string for badge',
+                  },
+                  explanation: {
+                    type: Type.STRING,
+                    description: 'Brief Thai explanation of why this emotion was chosen',
+                  },
+                },
+                required: ['emotion', 'emotionLabel', 'sentiment', 'energy', 'pitch', 'rate', 'sweetEnding'],
               },
             },
-            required: ['emotion', 'emotionLabel', 'sentiment', 'energy', 'pitch', 'rate', 'sweetEnding'],
-          },
-        },
-      });
+          });
 
-      // 3.5s timeout safeguard for super-fast TTS queue
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3500));
-      const response = (await Promise.race([apiPromise, timeoutPromise])) as any;
+          // 3.5s timeout safeguard for fast response in live chat
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3500));
+          const resCandidate = (await Promise.race([apiPromise, timeoutPromise])) as any;
+          if (resCandidate && resCandidate.text) {
+            response = resCandidate;
+            break;
+          }
+        } catch {
+          // If a model is temporarily experiencing high demand (503/429), try next candidate
+          continue;
+        }
+      }
 
       if (response && response.text) {
         const parsed = JSON.parse(response.text.trim());
@@ -874,8 +912,8 @@ app.post('/api/analyze-chat-emotion', async (req, res) => {
         emotionCache.set(cacheKey, modulated);
         return res.json(modulated);
       }
-    } catch (geminiError: any) {
-      console.warn('[Gemini Emotion Analysis fallback]:', geminiError?.message || geminiError);
+    } catch {
+      // Non-blocking fallback to Thai NLP rule-based engine
     }
 
     // Fallback if Gemini fails or times out

@@ -370,7 +370,18 @@ export interface OverlayCustomSettings {
   avatarAllowCheer: boolean;
 }
 
-export type StreamAvatarAction = 'walk' | 'idle' | 'jump' | 'cheer' | 'dance' | 'sleep' | 'wave' | 'leave';
+export type StreamAvatarAction =
+  | 'walk'
+  | 'idle'
+  | 'jump'
+  | 'cheer'
+  | 'dance'
+  | 'dancing'
+  | 'eat'
+  | 'eating'
+  | 'sleep'
+  | 'wave'
+  | 'leave';
 
 export interface StreamAvatarEntity {
   id: string;
@@ -476,7 +487,20 @@ export type RealtimeSyncEventType =
   | 'subathon_state'
   | 'avatar_action'
   | 'clear_chat'
-  | 'reset_state';
+  | 'reset_state'
+  | 'obs_source_connect'
+  | 'obs_source_disconnect'
+  | 'obs_connection_status';
+
+export interface ObsConnectionNotification {
+  id: string;
+  status: 'connected' | 'disconnected';
+  overlayType?: string;
+  overlayTitle?: string;
+  transport?: string;
+  clientCount?: number;
+  timestamp: number;
+}
 
 export interface StreamSyncEvent<T = any> {
   id?: string;

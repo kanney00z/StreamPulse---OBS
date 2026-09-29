@@ -1,5 +1,5 @@
 import Peer, { type DataConnection } from 'peerjs';
-import { OverlayCustomSettings, StreamSyncEvent, RealtimeServerState, RealtimeSyncStatus } from '../types';
+import { OverlayCustomSettings, StreamSyncEvent, RealtimeServerState, RealtimeSyncStatus, ObsConnectionNotification } from '../types';
 
 const SYNC_CHANNEL_NAME = 'streampulse_realtime_sync';
 const sessionId = Math.random().toString(36).substring(2, 9);
@@ -81,6 +81,25 @@ class RealtimeSyncManager {
     return sessionId;
   }
 
+  private obsConnectionListeners = new Set<(info: ObsConnectionNotification) => void>();
+
+  public onObsConnection(cb: (info: ObsConnectionNotification) => void): () => void {
+    this.obsConnectionListeners.add(cb);
+    return () => {
+      this.obsConnectionListeners.delete(cb);
+    };
+  }
+
+  public notifyObsConnection(info: ObsConnectionNotification) {
+    for (const listener of Array.from(this.obsConnectionListeners)) {
+      try {
+        listener(info);
+      } catch (err) {
+        console.warn('[RealtimeSync] ObsConnection listener error:', err);
+      }
+    }
+  }
+
   public getConnectedOBSCount(): number {
     let count = 0;
     for (const conn of this.p2pConnections) {
@@ -119,6 +138,13 @@ class RealtimeSyncManager {
         this.p2pConnections.add(conn);
 
         conn.on('open', () => {
+          this.notifyObsConnection({
+            id: 'p2p-' + Date.now(),
+            status: 'connected',
+            transport: 'WebRTC P2P Direct',
+            clientCount: this.getConnectedOBSCount(),
+            timestamp: Date.now(),
+          });
           // Immediately transmit current live settings to OBS
           try {
             conn.send({
@@ -134,6 +160,13 @@ class RealtimeSyncManager {
         conn.on('close', () => {
           this.p2pConnections.delete(conn);
           console.log(`[RealtimeSync P2P] OBS Studio disconnected: ${conn.peer}`);
+          this.notifyObsConnection({
+            id: 'p2p-disc-' + Date.now(),
+            status: 'disconnected',
+            transport: 'WebRTC P2P Direct',
+            clientCount: this.getConnectedOBSCount(),
+            timestamp: Date.now(),
+          });
         });
 
         conn.on('error', (err) => {
@@ -423,6 +456,7 @@ class RealtimeSyncManager {
     onStreamEvent?: (event: StreamSyncEvent) => void;
     onInit?: (state: RealtimeServerState) => void;
     onStatusChange?: (status: RealtimeSyncStatus) => void;
+    onObsConnection?: (info: ObsConnectionNotification) => void;
     clientType?: 'obs' | 'dashboard' | 'preview';
     roomId?: string;
   }): () => void {
@@ -434,6 +468,11 @@ class RealtimeSyncManager {
     let lastKnownUpdatedAt = 0;
     const clientType = callbacks.clientType || 'unknown';
     const activeRoomId = callbacks.roomId || getPersistentRoomId();
+
+    let obsConnUnsub: (() => void) | null = null;
+    if (callbacks.onObsConnection) {
+      obsConnUnsub = this.onObsConnection(callbacks.onObsConnection);
+    }
 
     // 0. Initialize WebRTC P2P (Dashboard as Host, OBS as Client)
     if (clientType === 'obs') {
@@ -483,6 +522,18 @@ class RealtimeSyncManager {
 
       if (data.id && this.isProcessed(data.id)) return;
       if (data.id) this.markProcessed(data.id);
+
+      if (data.type === 'obs_source_connect' || data.type === 'obs_source_disconnect' || data.type === 'obs_connection_status') {
+        const isConnect = data.type === 'obs_source_connect' || (data.payload && data.payload.status === 'connected');
+        this.notifyObsConnection({
+          id: 'bc-' + Date.now(),
+          status: isConnect ? 'connected' : 'disconnected',
+          overlayType: data.payload?.overlayType,
+          overlayTitle: data.payload?.overlayTitle,
+          transport: 'Browser Source Link',
+          timestamp: Date.now(),
+        });
+      }
 
       if (data.type === 'settings_update' && callbacks.onSettingsUpdate) {
         callbacks.onSettingsUpdate(data.payload);
@@ -610,6 +661,21 @@ class RealtimeSyncManager {
           }
         });
 
+        eventSource.addEventListener('obs_connection', (e: MessageEvent) => {
+          if (!isSubscribed) return;
+          try {
+            const data = JSON.parse(e.data);
+            this.notifyObsConnection({
+              id: 'sse-' + (data.clientId || Date.now()),
+              status: data.status === 'connected' ? 'connected' : 'disconnected',
+              overlayType: data.overlayType,
+              clientCount: data.obsCount,
+              transport: 'Server-Sent Events (SSE)',
+              timestamp: data.timestamp || Date.now(),
+            });
+          } catch {}
+        });
+
         eventSource.addEventListener('stream_event', (e: MessageEvent) => {
           if (!isSubscribed) return;
           try {
@@ -617,6 +683,18 @@ class RealtimeSyncManager {
             if (eventData.source === sessionId) return;
             if (eventData.id && this.isProcessed(eventData.id)) return;
             if (eventData.id) this.markProcessed(eventData.id);
+
+            if (eventData.type === 'obs_source_connect' || eventData.type === 'obs_source_disconnect' || eventData.type === 'obs_connection_status') {
+              const isConnect = eventData.type === 'obs_source_connect' || eventData.payload?.status === 'connected';
+              this.notifyObsConnection({
+                id: 'ev-' + (eventData.id || Date.now()),
+                status: isConnect ? 'connected' : 'disconnected',
+                overlayType: eventData.payload?.overlayType,
+                overlayTitle: eventData.payload?.overlayTitle,
+                transport: 'Realtime Server Stream',
+                timestamp: Date.now(),
+              });
+            }
 
             callbacks.onStreamEvent?.(eventData);
           } catch (err) {
@@ -653,6 +731,9 @@ class RealtimeSyncManager {
     // Cleanup function
     return () => {
       isSubscribed = false;
+      if (obsConnUnsub) {
+        obsConnUnsub();
+      }
       if (this.broadcastChannel) {
         this.broadcastChannel.removeEventListener('message', handleBroadcastMessage);
       }

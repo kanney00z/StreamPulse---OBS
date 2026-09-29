@@ -20,6 +20,7 @@ import {
   SubathonFontId,
   SubathonTimeAddedEvent,
   IndoFinityConnectionStatus,
+  StreamAvatarAction,
 } from '../types';
 import {
   INITIAL_CHAT_MESSAGES,
@@ -229,6 +230,10 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
   const [currentFollowAlert, setCurrentFollowAlert] = useState<FollowAlert | null>(null);
   const [currentShareAlert, setCurrentShareAlert] = useState<ShareAlert | null>(null);
   const [, setIndoFinityStatus] = useState<IndoFinityConnectionStatus>('connecting');
+  const [avatarManualTrigger, setAvatarManualTrigger] = useState<{
+    action: StreamAvatarAction;
+    timestamp: number;
+  } | null>(null);
 
   // Subathon Live State
   const [subathonSeconds, setSubathonSeconds] = useState<number>(subathonSecParam);
@@ -470,6 +475,42 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
 
   // Connect to Real-Time Live Sync Engine (Web Dashboard <-> OBS Studio Mirror)
   useEffect(() => {
+    const overlayTypeTitleMap: Record<string, string> = {
+      chat: 'กล่องแชทสด (Chat Box)',
+      leaderboard: 'อันดับกดใจ (Top Likes)',
+      subathon: 'นาฬิกา Subathon Timer',
+      avatars: 'ฝูงสัตว์ดุ๊กดิ๊ก (Stream Avatars)',
+      all: 'โอเวอร์เลย์รวม (All-in-One)',
+    };
+    const overlayTitle = overlayTypeTitleMap[overlayType] || `โอเวอร์เลย์ (${overlayType})`;
+
+    // Announce connection to Studio Dashboard
+    realtimeSync.broadcastStreamEvent({
+      type: 'obs_source_connect',
+      payload: {
+        status: 'connected',
+        overlayType,
+        overlayTitle,
+        timestamp: Date.now(),
+      },
+    });
+
+    const handleBeforeUnload = () => {
+      try {
+        realtimeSync.broadcastStreamEvent({
+          type: 'obs_source_disconnect',
+          payload: {
+            status: 'disconnected',
+            overlayType,
+            overlayTitle,
+            timestamp: Date.now(),
+          },
+        });
+      } catch {}
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     const unsubscribe = realtimeSync.subscribe({
       clientType: 'obs',
       roomId: urlParams.get('room') || undefined,
@@ -624,6 +665,14 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
           case 'clear_chat':
             setMessages([]);
             break;
+          case 'avatar_action':
+            if (event.payload?.action) {
+              setAvatarManualTrigger({
+                action: event.payload.action,
+                timestamp: event.payload.timestamp || Date.now(),
+              });
+            }
+            break;
           case 'reset_state':
             setMessages([]);
             setLeaderboard([]);
@@ -634,6 +683,8 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     });
 
     return () => {
+      handleBeforeUnload();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       unsubscribe();
     };
   }, []);
@@ -850,6 +901,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
             lastShare={currentShareAlert}
             totalLikes={totalLikes}
             isOBSMode={true}
+            manualActionTrigger={avatarManualTrigger}
           />
         </div>
       )}
@@ -900,6 +952,7 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
                   lastShare={currentShareAlert}
                   totalLikes={totalLikes}
                   isOBSMode={true}
+                  manualActionTrigger={avatarManualTrigger}
                 />
               </div>
             )}

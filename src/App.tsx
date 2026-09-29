@@ -41,8 +41,11 @@ import {
   SubathonTimeAddedEvent,
   IndoFinityConnectionStatus,
   IndoFinityLogItem,
+  ObsConnectionNotification,
+  StreamAvatarAction,
 } from './types';
 import { generateOverlayUrl, generateCleanRealtimeOverlayUrl } from './utils/overlayUrl';
+import { ObsConnectionToast } from './components/ObsConnectionToast';
 import {
   INITIAL_CHAT_MESSAGES,
   INITIAL_LIKE_LEADERBOARD,
@@ -222,8 +225,47 @@ export default function App() {
   const shareTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoSimIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Active OBS Studio client connections counter
+  // Stream Avatars Animation Trigger & State
+  const [avatarActionTrigger, setAvatarActionTrigger] = useState<{
+    action: StreamAvatarAction;
+    timestamp: number;
+  } | null>(null);
+  const [currentAvatarAnimation, setCurrentAvatarAnimation] = useState<'idle' | 'dancing' | 'eating' | null>(null);
+
+  // Active OBS Studio client connections counter & notifications
   const [activeObsClients, setActiveObsClients] = useState<number>(0);
+  const [obsNotifications, setObsNotifications] = useState<ObsConnectionNotification[]>([]);
+  const lastObsCountRef = useRef<number | null>(null);
+  const lastNotifTimeRef = useRef<number>(0);
+
+  const triggerObsNotification = (notif: Omit<ObsConnectionNotification, 'id'>) => {
+    const now = Date.now();
+    // Debounce rapid bursts of the same status within 1.2 seconds
+    if (now - lastNotifTimeRef.current < 1200) {
+      return;
+    }
+    lastNotifTimeRef.current = now;
+
+    const fullNotif: ObsConnectionNotification = {
+      ...notif,
+      id: `obs-notif-${now}-${Math.random().toString(36).substring(2, 6)}`,
+    };
+
+    setObsNotifications((prev) => [fullNotif, ...prev.slice(0, 2)]);
+
+    // Audio cue if sound is enabled
+    if (soundEnabled) {
+      if (notif.status === 'connected') {
+        sounds.playObsConnect();
+      } else {
+        sounds.playObsDisconnect();
+      }
+    }
+  };
+
+  const dismissObsNotification = (id: string) => {
+    setObsNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
 
   // Broadcast initial settings on load, start P2P Host, and poll OBS connection status
   useEffect(() => {
@@ -232,6 +274,30 @@ export default function App() {
 
     const unsubscribe = realtimeSync.subscribe({
       clientType: 'dashboard',
+      onObsConnection: (info) => {
+        triggerObsNotification({
+          status: info.status,
+          overlayType: info.overlayType,
+          overlayTitle: info.overlayTitle,
+          transport: info.transport,
+          clientCount: info.clientCount,
+          timestamp: info.timestamp || Date.now(),
+        });
+      },
+      onStreamEvent: (event) => {
+        if (event.type === 'avatar_action' && event.payload?.action) {
+          const act = event.payload.action;
+          setAvatarActionTrigger({
+            action: act,
+            timestamp: event.payload.timestamp || Date.now(),
+          });
+          if (act === 'idle' || act === 'dancing' || act === 'eating') {
+            setCurrentAvatarAnimation(act);
+          } else {
+            setCurrentAvatarAnimation(null);
+          }
+        }
+      },
     });
 
     const checkState = () => {
@@ -244,7 +310,27 @@ export default function App() {
         })
         .then((data) => {
           const serverCount = data?.metrics?.obsClients ?? 0;
-          setActiveObsClients(Math.max(p2pCount, serverCount));
+          const currentCount = Math.max(p2pCount, serverCount);
+          setActiveObsClients(currentCount);
+
+          if (lastObsCountRef.current !== null) {
+            if (currentCount > lastObsCountRef.current) {
+              triggerObsNotification({
+                status: 'connected',
+                clientCount: currentCount,
+                transport: p2pCount > 0 ? 'WebRTC P2P Direct' : 'Realtime Sync',
+                timestamp: Date.now(),
+              });
+            } else if (currentCount < lastObsCountRef.current && lastObsCountRef.current > 0) {
+              triggerObsNotification({
+                status: 'disconnected',
+                clientCount: currentCount,
+                transport: 'Realtime Sync',
+                timestamp: Date.now(),
+              });
+            }
+          }
+          lastObsCountRef.current = currentCount;
         })
         .catch(() => {
           setActiveObsClients(p2pCount);
@@ -256,7 +342,7 @@ export default function App() {
       clearInterval(interval);
       unsubscribe();
     };
-  }, [isOverlayMode]);
+  }, [isOverlayMode, soundEnabled]);
 
   // Sync sound mute/unmute and TTS settings
   const settingsRef = useRef(settings);
@@ -819,6 +905,39 @@ export default function App() {
     });
   };
 
+  // Action: Trigger Avatar Animation State (Idle, Dancing, Eating, Walk)
+  const handleTriggerAvatarAction = (action: 'idle' | 'dancing' | 'eating' | 'walk') => {
+    if (action === 'walk') {
+      setCurrentAvatarAnimation(null);
+      const trigger = { action: 'walk' as StreamAvatarAction, timestamp: Date.now() };
+      setAvatarActionTrigger(trigger);
+      realtimeSync.broadcastStreamEvent({
+        type: 'avatar_action',
+        payload: trigger,
+      });
+      return;
+    }
+
+    const nextAnim = currentAvatarAnimation === action ? null : action;
+    setCurrentAvatarAnimation(nextAnim);
+    const targetAction: StreamAvatarAction = nextAnim || 'walk';
+    const trigger = { action: targetAction, timestamp: Date.now() };
+    setAvatarActionTrigger(trigger);
+
+    realtimeSync.broadcastStreamEvent({
+      type: 'avatar_action',
+      payload: trigger,
+    });
+
+    if (targetAction === 'dancing') {
+      sounds.playGift('rare');
+    } else if (targetAction === 'eating') {
+      sounds.playGift('common');
+    } else if (targetAction === 'idle') {
+      sounds.playTimerAdd();
+    }
+  };
+
   // Setup IndoFinity Client listeners
   useEffect(() => {
     const client = indoFinityClientRef.current;
@@ -1003,25 +1122,48 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* OBS Studio Live Real-Time Sync Indicator */}
-            <div
-              className={`flex items-center gap-2 px-3 py-1 border rounded-full text-xs font-medium transition-all ${
-                activeObsClients > 0
-                  ? 'bg-cyan-500/15 border-cyan-400/40 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.25)]'
-                  : 'bg-slate-900 border-white/10 text-slate-400'
-              }`}
-              title="ระบบซิงค์สด OBS Real-Time: แก้ไขตั้งค่าหรือเกิดอีเวนต์ใดๆ จะแสดงผลบน OBS Studio ทันทีแบบเรียลไทม์"
-            >
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  activeObsClients > 0 ? 'bg-cyan-400 animate-ping' : 'bg-emerald-400'
+            {/* OBS Studio Live Real-Time Sync Indicator & Test Button */}
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setActiveTab('links')}
+                className={`flex items-center gap-2 px-3 py-1 border rounded-full text-xs font-medium transition-all cursor-pointer ${
+                  activeObsClients > 0
+                    ? 'bg-cyan-500/15 border-cyan-400/40 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.25)] hover:bg-cyan-500/25'
+                    : 'bg-slate-900 border-white/10 hover:border-white/20 text-slate-400 hover:text-slate-300'
                 }`}
-              />
-              <span>
-                {activeObsClients > 0
-                  ? `OBS Sync: เชื่อมต่อสด (${activeObsClients} จอ)`
-                  : 'OBS Sync: พร้อมส่งสด'}
-              </span>
+                title="ระบบซิงค์สด OBS Real-Time: แก้ไขตั้งค่าหรือเกิดอีเวนต์ใดๆ จะแสดงผลบน OBS Studio ทันทีแบบเรียลไทม์ (คลิกเพื่อดู URL แยกหมวดหมู่)"
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    activeObsClients > 0 ? 'bg-cyan-400 animate-ping' : 'bg-emerald-400'
+                  }`}
+                />
+                <span>
+                  {activeObsClients > 0
+                    ? `OBS Sync: เชื่อมต่อสด (${activeObsClients} จอ)`
+                    : 'OBS Sync: พร้อมส่งสด'}
+                </span>
+              </button>
+
+              {/* Quick Test OBS Toast Notification Button */}
+              <button
+                type="button"
+                onClick={() =>
+                  triggerObsNotification({
+                    status: 'connected',
+                    overlayTitle: 'กล่องแชทสด (Chat Box)',
+                    clientCount: Math.max(1, activeObsClients + 1),
+                    transport: 'OBS Studio CEF Mirror',
+                    timestamp: Date.now(),
+                  })
+                }
+                className="px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 border border-white/10 hover:border-cyan-400/40 rounded-full text-[11px] text-slate-400 hover:text-cyan-300 transition-all cursor-pointer flex items-center gap-1"
+                title="คลิกเพื่อทดสอบบับเบิ้ลแจ้งเตือนเมื่อ OBS เชื่อมต่อ (Test OBS Alert Toast)"
+              >
+                <Radio className="w-3 h-3 text-cyan-400" />
+                <span className="hidden sm:inline">ทดสอบแจ้งเตือน</span>
+              </button>
             </div>
 
             {/* IndoFinity Live Interactive Pill */}
@@ -1252,6 +1394,7 @@ export default function App() {
                           lastShare={currentShareAlert}
                           totalLikes={totalLikes}
                           isOBSMode={false}
+                          manualActionTrigger={avatarActionTrigger}
                           onAddViewer={() =>
                             setSettings((prev) => ({
                               ...prev,
@@ -1355,6 +1498,7 @@ export default function App() {
                           lastShare={currentShareAlert}
                           totalLikes={totalLikes}
                           isOBSMode={false}
+                          manualActionTrigger={avatarActionTrigger}
                           onAddViewer={() =>
                             setSettings((prev) => ({
                               ...prev,
@@ -1396,6 +1540,7 @@ export default function App() {
                   onToggleSubathon={handleToggleSubathon}
                   onAddSubathonTime={handleAddSubathonTime}
                   onResetSubathon={handleResetSubathonTimer}
+                  onTriggerAvatarAction={handleTriggerAvatarAction}
                 />
               </div>
             </div>
@@ -1413,6 +1558,8 @@ export default function App() {
               streamShareCount={settings.streamShareCount}
               avatarViewerCount={settings.avatarViewerCount}
               onUpdateViewerCount={(count) => updateSettings({ avatarViewerCount: count })}
+              avatarCurrentAnimation={currentAvatarAnimation}
+              onTriggerAvatarAction={handleTriggerAvatarAction}
               onTriggerAvatarJump={() => {
                 sounds.playTimerAdd();
               }}
@@ -1501,6 +1648,17 @@ export default function App() {
           StreamPulse OBS Overlay Suite • สร้างเพื่อสตรีมเมอร์ไทย • รองรับ OBS Studio, Streamlabs Desktop & PRISM Live
         </p>
       </footer>
+
+      {/* OBS Browser Source Connection Toast Alert Bubble */}
+      {!isOverlayMode && (
+        <ObsConnectionToast
+          notifications={obsNotifications}
+          onDismiss={dismissObsNotification}
+          onOpenObsModal={() => setActiveTab('links')}
+          soundEnabled={soundEnabled}
+          onToggleSound={() => setSoundEnabled((prev) => !prev)}
+        />
+      )}
     </div>
   );
 }

@@ -346,6 +346,70 @@ class SoundEngine {
       });
     } catch {}
   }
+
+  // OBS Browser Source connection chime: pleasant rising crystal chime
+  playObsConnect() {
+    if (!this.enabled) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      // Arpeggio: C5 (523.25), E5 (659.25), G5 (783.99), C6 (1046.50)
+      const freqs = [523.25, 659.25, 783.99, 1046.50];
+      freqs.forEach((freq, idx) => {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+
+        const startTime = now + idx * 0.07;
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.18 * this.volume, startTime + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + 0.38);
+      });
+    } catch {}
+  }
+
+  // OBS Browser Source disconnect chime: gentle descending tone
+  playObsDisconnect() {
+    if (!this.enabled) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      // Descending tone: G5 (783.99) -> D5 (587.33)
+      const freqs = [783.99, 587.33];
+      freqs.forEach((freq, idx) => {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+
+        const startTime = now + idx * 0.12;
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.14 * this.volume, startTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.28);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(startTime);
+        osc.stop(startTime + 0.3);
+      });
+    } catch {}
+  }
 }
 
 export const sounds = new SoundEngine();

@@ -46,6 +46,7 @@ interface WidgetCustomizerPanelProps {
   onToggleSubathon: () => void;
   onAddSubathonTime: (sec: number, reason?: string) => void;
   onResetSubathon: (sec?: number) => void;
+  onTriggerAvatarAction?: (action: 'idle' | 'dancing' | 'eating' | 'walk') => void;
 }
 
 interface CategoryMeta {
@@ -163,6 +164,7 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
   onToggleSubathon,
   onAddSubathonTime,
   onResetSubathon,
+  onTriggerAvatarAction,
 }) => {
   // Determine which category to customize
   // If activeWidgetView is a specific widget, auto-select it. If 'all', default to current internal tab.
@@ -448,33 +450,39 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
           </div>
 
           {/* 4.1 TikTok Platform Icon Toggle */}
-          <div className="p-3 bg-cyan-950/40 rounded-2xl border border-cyan-500/30 flex items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <div className="text-xs font-bold text-cyan-200 flex items-center gap-1.5">
-                <span>🎵 แสดงโลโก้แพลตฟอร์ม (TikTok / Twitch / YouTube):</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                  settings.chatShowPlatformIcon
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                }`}>
-                  {settings.chatShowPlatformIcon ? 'เปิดแสดงโลโก้' : 'ปิดแล้ว (สตรีมใน TikTok ไม่ขึ้นซ้ำซ้อน)'}
-                </span>
+          <div className="p-3 bg-slate-900/60 rounded-2xl border border-white/10 hover:border-cyan-500/30 transition-all space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="text-base shrink-0">🎵</span>
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-slate-200">
+                    แสดงโลโก้แพลตฟอร์มหน้าชื่อ
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    TikTok, Twitch, YouTube
+                  </div>
+                </div>
               </div>
-              <p className="text-[11px] text-slate-400">
-                เมื่อสตรีมใน TikTok แนะนำให้ปิด เพื่อไม่ให้มีคำว่า tiktok หรือไอคอนขึ้นหน้าชื่อคนเม้น
-              </p>
+
+              <button
+                type="button"
+                onClick={() => onUpdateSettings({ chatShowPlatformIcon: !settings.chatShowPlatformIcon })}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                  settings.chatShowPlatformIcon
+                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/30'
+                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full shrink-0 ${settings.chatShowPlatformIcon ? 'bg-cyan-400' : 'bg-emerald-400'}`} />
+                <span className="whitespace-nowrap">
+                  {settings.chatShowPlatformIcon ? 'แสดงโลโก้' : 'ซ่อนโลโก้ (แนะนำ)'}
+                </span>
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => onUpdateSettings({ chatShowPlatformIcon: !settings.chatShowPlatformIcon })}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 cursor-pointer ${
-                settings.chatShowPlatformIcon
-                  ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
-                  : 'bg-slate-900 text-slate-200 border-white/20 hover:border-cyan-400'
-              }`}
-            >
-              {settings.chatShowPlatformIcon ? 'เปิดไอคอนอยู่' : '✓ ปิดไอคอน TikTok (ตามที่ขอ)'}
-            </button>
+
+            <p className="text-[11px] text-slate-400 leading-relaxed border-t border-white/5 pt-2">
+              💡 แนะนำให้เลือก <span className="text-emerald-300 font-medium">"ซ่อนโลโก้"</span> เมื่อสตรีมบน TikTok โดยตรง เพื่อไม่ให้มีคำว่า tiktok หรือไอคอนขึ้นซ้ำซ้อนหน้าชื่อคนดู
+            </p>
           </div>
 
           {/* 5. AI Sweet TTS Option */}
@@ -1186,6 +1194,7 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
             settings={settings}
             onUpdateSettings={onUpdateSettings}
             onCopyObsUrl={(type) => onCopyUrl(type as any)}
+            onTriggerAvatarAction={onTriggerAvatarAction}
           />
         </div>
       )}

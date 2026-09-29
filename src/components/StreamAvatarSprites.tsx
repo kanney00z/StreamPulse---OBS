@@ -1,5 +1,5 @@
 import React from 'react';
-import { StreamAvatarEntity } from '../types';
+import { StreamAvatarEntity, StreamAvatarAction } from '../types';
 
 interface AvatarSpriteProps {
   avatar: StreamAvatarEntity;
@@ -1166,6 +1166,138 @@ const renderShibaSquad = (
   );
 };
 
+// -------------------------------------------------------------
+// Action Props & Visual Effects (Eating snacks, Dancing notes, Idle chill)
+// -------------------------------------------------------------
+const renderActionProp = (
+  action: StreamAvatarAction,
+  style: 'shiba-squad' | 'chibi-pixel' | 'cute-animals' | 'kawaii-slimes' | 'cyber-mecha',
+  spriteIndex: number,
+  stepFrame: number
+) => {
+  const isEating = action === 'eat' || action === 'eating';
+  const isDancing = action === 'dance' || action === 'dancing';
+  const isIdle = action === 'idle';
+
+  if (isEating) {
+    const foodVariant = spriteIndex % 4;
+    return (
+      <g className="animate-pulse" transform={`translate(0, ${stepFrame === 0 ? 0 : -1})`}>
+        {/* Cute Food Item held in front/mouth area */}
+        {foodVariant === 0 && (
+          /* Juicy Cartoon Bone / Roasted Meat */
+          <g transform="translate(24, 25)">
+            <ellipse cx="6" cy="3" rx="5" ry="3.5" fill="#b45309" stroke="#78350f" strokeWidth="0.8" />
+            <ellipse cx="6" cy="3" rx="3.5" ry="2" fill="#d97706" />
+            {/* White bone ends */}
+            <circle cx="0.5" cy="1.5" r="1.8" fill="#f8fafc" stroke="#64748b" strokeWidth="0.6" />
+            <circle cx="0.5" cy="4.5" r="1.8" fill="#f8fafc" stroke="#64748b" strokeWidth="0.6" />
+            <circle cx="11.5" cy="1.5" r="1.8" fill="#f8fafc" stroke="#64748b" strokeWidth="0.6" />
+            <circle cx="11.5" cy="4.5" r="1.8" fill="#f8fafc" stroke="#64748b" strokeWidth="0.6" />
+            {/* Tiny crumbs */}
+            <circle cx="13" cy="8" r="0.7" fill="#d97706" />
+            <circle cx="4" cy="9" r="0.6" fill="#b45309" />
+          </g>
+        )}
+        {foodVariant === 1 && (
+          /* Boba Milk Tea Cup with Straw */
+          <g transform="translate(26, 23)">
+            {/* Straw */}
+            <rect x="5.5" y="-3" width="1.5" height="5" fill="#f43f5e" rx="0.5" transform="rotate(12 5.5 -3)" />
+            {/* Cup */}
+            <path d="M 2 2 L 3 10 L 8 10 L 9 2 Z" fill="#fed7aa" stroke="#78350f" strokeWidth="0.8" />
+            {/* Lid */}
+            <rect x="1" y="0.5" width="9" height="2" rx="1" fill="#ec4899" stroke="#9d174d" strokeWidth="0.6" />
+            {/* Tapioca Pearls */}
+            <circle cx="4" cy="8.5" r="0.9" fill="#18181b" />
+            <circle cx="6" cy="8.5" r="0.9" fill="#18181b" />
+            <circle cx="5" cy="6.5" r="0.9" fill="#18181b" />
+            <circle cx="7" cy="7" r="0.9" fill="#18181b" />
+          </g>
+        )}
+        {foodVariant === 2 && (
+          /* Tri-color Dango Skewer */
+          <g transform="translate(25, 23) rotate(-15 4 4)">
+            {/* Bamboo stick */}
+            <rect x="0" y="4" width="13" height="1.2" rx="0.6" fill="#78350f" />
+            {/* Pink Dango */}
+            <circle cx="3" cy="4.5" r="2.4" fill="#f472b6" stroke="#db2777" strokeWidth="0.6" />
+            {/* White Dango */}
+            <circle cx="7" cy="4.5" r="2.4" fill="#ffffff" stroke="#cbd5e1" strokeWidth="0.6" />
+            {/* Green Matcha Dango */}
+            <circle cx="11" cy="4.5" r="2.4" fill="#84cc16" stroke="#65a30d" strokeWidth="0.6" />
+          </g>
+        )}
+        {foodVariant === 3 && (
+          /* Burger / Snack Sandwich */
+          <g transform="translate(24, 25)">
+            {/* Top Bun with sesame */}
+            <path d="M 1 3 Q 6 -1 11 3 Z" fill="#f59e0b" stroke="#b45309" strokeWidth="0.7" />
+            <circle cx="4" cy="1.5" r="0.4" fill="#fef3c7" />
+            <circle cx="7" cy="1" r="0.4" fill="#fef3c7" />
+            {/* Patty & Cheese */}
+            <rect x="1.5" y="3" width="9" height="1.8" rx="0.8" fill="#78350f" />
+            <polygon points="3,4.5 5,6 7,4.5" fill="#facc15" />
+            {/* Lettuce */}
+            <rect x="1" y="4.5" width="10" height="1.2" rx="0.5" fill="#22c55e" />
+            {/* Bottom Bun */}
+            <rect x="1.5" y="5.7" width="9" height="2" rx="1" fill="#f59e0b" stroke="#b45309" strokeWidth="0.6" />
+          </g>
+        )}
+
+        {/* Floating Munch Effect Particles */}
+        <g transform="translate(36, 17)">
+          <text x="0" y="0" fontSize="5.5" fill="#f59e0b" fontWeight="bold">✨</text>
+        </g>
+      </g>
+    );
+  }
+
+  if (isDancing) {
+    return (
+      <g>
+        {/* Floating Musical Notes */}
+        <g transform="translate(33, 6)" className="animate-bounce">
+          <circle cx="3" cy="4" r="1.5" fill="#ec4899" />
+          <circle cx="7" cy="2.5" r="1.5" fill="#ec4899" />
+          <rect x="4" y="0" width="1.2" height="4" fill="#ec4899" />
+          <rect x="8" y="-1.5" width="1.2" height="4" fill="#ec4899" />
+          <polygon points="4,0 9.2,-1.5 9.2,0 4,1.5" fill="#ec4899" />
+        </g>
+        <g transform="translate(7, 8)">
+          <circle cx="2" cy="3" r="1.3" fill="#a855f7" />
+          <rect x="3" y="-1" width="1" height="4" fill="#a855f7" />
+          <path d="M 4 -1 Q 6 -2 5 1" stroke="#a855f7" strokeWidth="1" fill="none" />
+        </g>
+        {/* Dance Golden Sparkles */}
+        <g transform="translate(23, 2)">
+          <polygon points="0,2 1,0 2,2 4,3 2,4 1,6 0,4 -2,3" fill="#facc15" />
+        </g>
+      </g>
+    );
+  }
+
+  if (isIdle) {
+    return (
+      <g opacity="0.85">
+        {/* Relaxed / Chill Steam & Calm Aura */}
+        <g transform="translate(36, 9)">
+          <path
+            d="M 1 5 Q 3 2.5 1 0 Q -1 -2 1 -4"
+            fill="none"
+            stroke="#94a3b8"
+            strokeWidth="0.8"
+            strokeLinecap="round"
+            opacity="0.6"
+          />
+        </g>
+      </g>
+    );
+  }
+
+  return null;
+};
+
 export const StreamAvatarSprite: React.FC<AvatarSpriteProps> = ({
   avatar,
   style,
@@ -1173,6 +1305,9 @@ export const StreamAvatarSprite: React.FC<AvatarSpriteProps> = ({
   stepFrame,
 }) => {
   const isJumping = avatar.action === 'jump' || avatar.yOffset < -5;
+  const isDancing = avatar.action === 'dance' || avatar.action === 'dancing' || avatar.action === 'cheer';
+  const isEating = avatar.action === 'eat' || avatar.action === 'eating';
+  const isIdle = avatar.action === 'idle';
 
   // Dimensions
   const pxSize = size === 'sm' ? 44 : size === 'lg' ? 70 : 56;
@@ -1182,7 +1317,7 @@ export const StreamAvatarSprite: React.FC<AvatarSpriteProps> = ({
       style={{ width: pxSize, height: pxSize }}
       className={`relative select-none pointer-events-none transition-transform duration-150 ease-out origin-center ${
         avatar.direction === 'left' ? 'scale-x-[-1]' : 'scale-x-100'
-      }`}
+      } ${isDancing ? 'animate-bounce' : isEating ? 'animate-pulse' : ''}`}
     >
       <svg
         width="100%"
@@ -1200,6 +1335,9 @@ export const StreamAvatarSprite: React.FC<AvatarSpriteProps> = ({
           renderKawaiiSlime(avatar.spriteIndex, avatar.color, stepFrame, isJumping)}
         {style === 'cyber-mecha' &&
           renderCyberMecha(avatar.spriteIndex, avatar.color, stepFrame, isJumping)}
+
+        {/* Action Props: Food treats, Music notes, Relax steam */}
+        {renderActionProp(avatar.action, style, avatar.spriteIndex, stepFrame)}
       </svg>
     </div>
   );

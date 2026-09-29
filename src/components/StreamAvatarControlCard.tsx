@@ -27,6 +27,11 @@ interface StreamAvatarControlCardProps {
   onTriggerAvatarGift?: () => void;
   onTriggerFollow?: () => void;
   onTriggerShare?: () => void;
+  onTriggerAvatarAction?: (action: 'idle' | 'dancing' | 'eating' | 'walk') => void;
+  onTriggerAvatarIdle?: () => void;
+  onTriggerAvatarDance?: () => void;
+  onTriggerAvatarEat?: () => void;
+  onCopyObsUrl?: (type: string) => void;
 }
 
 export const StreamAvatarControlCard: React.FC<StreamAvatarControlCardProps> = ({
@@ -38,6 +43,10 @@ export const StreamAvatarControlCard: React.FC<StreamAvatarControlCardProps> = (
   onTriggerAvatarGift,
   onTriggerFollow,
   onTriggerShare,
+  onTriggerAvatarAction,
+  onTriggerAvatarIdle,
+  onTriggerAvatarDance,
+  onTriggerAvatarEat,
 }) => {
   const [testSpeech, setTestSpeech] = useState('');
 
@@ -233,6 +242,47 @@ export const StreamAvatarControlCard: React.FC<StreamAvatarControlCardProps> = (
           <span>ปุ่มสั่งแอนิเมชันโต้ตอบตัวละคร (Interactive Actions):</span>
         </span>
 
+        <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-3 gap-2">
+          {/* Idle Toggle */}
+          <button
+            onClick={() => {
+              onTriggerAvatarAction?.('idle');
+              onTriggerAvatarIdle?.();
+            }}
+            className="py-2 px-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-amber-400/40 text-xs font-bold text-amber-300 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm hover:border-amber-300"
+            title="สั่งให้ตัวละครยืนพักชิลๆ (Idle State)"
+          >
+            <span>☕</span>
+            <span>พักชิล (Idle)</span>
+          </button>
+
+          {/* Dancing Toggle */}
+          <button
+            onClick={() => {
+              onTriggerAvatarAction?.('dancing');
+              onTriggerAvatarDance?.();
+            }}
+            className="py-2 px-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-fuchsia-400/40 text-xs font-bold text-fuchsia-300 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm hover:border-fuchsia-300"
+            title="สั่งให้ตัวละครเต้น (Dancing State)"
+          >
+            <span>💃</span>
+            <span>เต้น (Dancing)</span>
+          </button>
+
+          {/* Eating Toggle */}
+          <button
+            onClick={() => {
+              onTriggerAvatarAction?.('eating');
+              onTriggerAvatarEat?.();
+            }}
+            className="py-2 px-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-emerald-400/40 text-xs font-bold text-emerald-300 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm hover:border-emerald-300"
+            title="สั่งให้ตัวละครกินขนม (Eating State)"
+          >
+            <span>🍖</span>
+            <span>กินขนม (Eating)</span>
+          </button>
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           <button
             onClick={onTriggerAvatarJump}
@@ -246,7 +296,7 @@ export const StreamAvatarControlCard: React.FC<StreamAvatarControlCardProps> = (
             onClick={onTriggerAvatarCheer}
             className="py-2 px-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/15 text-xs font-bold text-pink-300 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm hover:border-pink-400"
           >
-            <span>💃</span>
+            <span>🎉</span>
             <span>ส่งเสียงเชียร์</span>
           </button>
 
