@@ -357,6 +357,26 @@ export const StreamAvatarsOverlay: React.FC<StreamAvatarsOverlayProps> = ({
           };
         }
 
+        if (action === 'cheer') {
+          const cheerSpeeches = [
+            'เย้ๆๆ สตรีมนี้สนุกที่สุดเลย! 🎉✨',
+            'สู้ๆ นะคร้าบบบ เป็นกำลังใจให้! 💖',
+            'ขอหัวใจรัวๆ ให้สตรีมเมอร์หน่อย! 🌟',
+            'ฮูเร่! ไฮป์กันให้สุดดด 🥳🔥',
+          ];
+          return {
+            ...av,
+            action: 'cheer',
+            vy: -20 - Math.random() * 6,
+            yOffset: -1,
+            actionTimer: 6,
+            celebrating: true,
+            speechBubble: settings.avatarShowChatBubbles
+              ? { text: cheerSpeeches[idx % cheerSpeeches.length], timestamp: Date.now() }
+              : undefined,
+          };
+        }
+
         return av;
       });
     });

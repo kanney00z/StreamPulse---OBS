@@ -179,6 +179,7 @@ export default function App() {
       avatarDynamicPresence: true,
       avatarFloorStyle: 'transparent',
       avatarAllowCheer: true,
+      autoHideStudioUi: false,
     };
 
     if (typeof window !== 'undefined') {
@@ -938,6 +939,26 @@ export default function App() {
     }
   };
 
+  const handleTriggerAvatarJump = () => {
+    sounds.playTimerAdd();
+    const trigger = { action: 'jump' as StreamAvatarAction, timestamp: Date.now() };
+    setAvatarActionTrigger(trigger);
+    realtimeSync.broadcastStreamEvent({
+      type: 'avatar_action',
+      payload: trigger,
+    });
+  };
+
+  const handleTriggerAvatarCheer = () => {
+    sounds.playGift('rare');
+    const trigger = { action: 'cheer' as StreamAvatarAction, timestamp: Date.now() };
+    setAvatarActionTrigger(trigger);
+    realtimeSync.broadcastStreamEvent({
+      type: 'avatar_action',
+      payload: trigger,
+    });
+  };
+
   // Setup IndoFinity Client listeners
   useEffect(() => {
     const client = indoFinityClientRef.current;
@@ -1541,6 +1562,12 @@ export default function App() {
                   onAddSubathonTime={handleAddSubathonTime}
                   onResetSubathon={handleResetSubathonTimer}
                   onTriggerAvatarAction={handleTriggerAvatarAction}
+                  onTriggerAvatarJump={handleTriggerAvatarJump}
+                  onTriggerAvatarCheer={handleTriggerAvatarCheer}
+                  onTriggerAvatarGift={() => handleSendGift(GIFT_ITEMS[0])}
+                  onTriggerFollow={handleSendTestFollow}
+                  onTriggerShare={handleSendTestShare}
+                  onTriggerAvatarChat={(text) => handleSendChat(text)}
                 />
               </div>
             </div>
@@ -1560,12 +1587,8 @@ export default function App() {
               onUpdateViewerCount={(count) => updateSettings({ avatarViewerCount: count })}
               avatarCurrentAnimation={currentAvatarAnimation}
               onTriggerAvatarAction={handleTriggerAvatarAction}
-              onTriggerAvatarJump={() => {
-                sounds.playTimerAdd();
-              }}
-              onTriggerAvatarCheer={() => {
-                sounds.playGift('rare');
-              }}
+              onTriggerAvatarJump={handleTriggerAvatarJump}
+              onTriggerAvatarCheer={handleTriggerAvatarCheer}
               isAutoSimulating={isAutoSimulating}
               onToggleAutoSim={() => setIsAutoSimulating((prev) => !prev)}
               soundEnabled={soundEnabled}

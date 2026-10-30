@@ -218,11 +218,18 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
     avatarShowChatBubbles: avatarBubblesParam,
     avatarShowGiftsReaction: true,
     avatarShowLikesReaction: true,
+    avatarShowFollowReaction: true,
+    avatarShowShareReaction: true,
+    avatarDynamicPresence: true,
     avatarFloorStyle: avatarFloorParam,
     avatarAllowCheer: true,
+    autoHideStudioUi: false,
   });
 
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES);
+  // In live OBS Overlay mode, start with empty chat messages so nothing pops up when nobody has typed.
+  // Sample preview messages are only loaded if explicitly requested via ?preview=1
+  const isPreview = urlParams.get('preview') === '1' || urlParams.get('preview') === 'true';
+  const [messages, setMessages] = useState<ChatMessage[]>(() => (isPreview ? INITIAL_CHAT_MESSAGES : []));
   const [leaderboard, setLeaderboard] = useState<LikeUser[]>([]);
   const [totalLikes, setTotalLikes] = useState<number>(0);
   const [recentHearts, setRecentHearts] = useState<FloatingHeartItem[]>([]);
@@ -553,31 +560,6 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
         }
         if (typeof (newSettings as any).currentLikes === 'number') {
           setTotalLikes((newSettings as any).currentLikes);
-        }
-
-        // If chat theme, layout, font, or autohide was updated, refresh message timestamps
-        // so the streamer immediately sees the new design in OBS even if stream is currently silent
-        if (
-          newSettings.chatTheme !== undefined ||
-          newSettings.chatLayout !== undefined ||
-          newSettings.chatFontSize !== undefined ||
-          newSettings.chatAutoHideSeconds !== undefined
-        ) {
-          setMessages((prev) => {
-            const now = Date.now();
-            if (prev.length === 0) {
-              return INITIAL_CHAT_MESSAGES.map((m, i) => ({ ...m, timestamp: now - (5 - i) * 1200 }));
-            }
-            const hideSec = (newSettings.chatAutoHideSeconds ?? settingsRef.current.chatAutoHideSeconds ?? 10);
-            const anyVisible = hideSec <= 0 || prev.some((m) => now - m.timestamp < hideSec * 1000);
-            if (!anyVisible) {
-              // Awaken the latest 3 messages so they animate into view with the new theme
-              return prev.map((m, idx) =>
-                idx >= prev.length - 3 ? { ...m, timestamp: now - (prev.length - idx) * 800 } : m
-              );
-            }
-            return prev;
-          });
         }
 
         const noticeText = newSettings.chatTheme
@@ -960,9 +942,9 @@ export const OverlayView: React.FC<OverlayViewProps> = ({ overlayType }) => {
         </div>
       )}
 
-      {/* Real-time live sync toast feedback for OBS streamer confirmation */}
+      {/* Real-time live sync toast feedback for OBS streamer confirmation (only in preview mode) */}
       <AnimatePresence>
-        {syncNotice && (
+        {syncNotice && isPreview && (
           <motion.div
             initial={{ opacity: 0, y: -20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}

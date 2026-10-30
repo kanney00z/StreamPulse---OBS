@@ -363,11 +363,14 @@ export interface OverlayCustomSettings {
   avatarShowChatBubbles: boolean;
   avatarShowGiftsReaction: boolean;
   avatarShowLikesReaction: boolean;
-  avatarShowFollowReaction: boolean; // คนกดติดตาม -> มีตัวละครปรากฏตัว/ฉลอง
-  avatarShowShareReaction: boolean; // คนกดแชร์ -> มีตัวละครปรากฏตัว/ฉลอง
-  avatarDynamicPresence: boolean; // จำลองคนดูเข้า-ออกเรียลไทม์ (คนเข้า = เดิน, ไม่มีคน = หายไป)
+  avatarShowFollowReaction?: boolean; // คนกดติดตาม -> มีตัวละครปรากฏตัว/ฉลอง
+  avatarShowShareReaction?: boolean; // คนกดแชร์ -> มีตัวละครปรากฏตัว/ฉลอง
+  avatarDynamicPresence?: boolean; // จำลองคนดูเข้า-ออกเรียลไทม์ (คนเข้า = เดิน, ไม่มีคน = หายไป)
   avatarFloorStyle: 'transparent' | 'neon-line' | 'grass-platform' | 'cyber-grid';
   avatarAllowCheer: boolean;
+
+  // Auto-hide Studio UI (ซ่อนแถบเมนูและแผงควบคุมอัตโนมัติเมื่อไม่มีการขยับเมาส์ 5 วินาที เพื่อดูหน้าจอแบบคลีน)
+  autoHideStudioUi?: boolean;
 }
 
 export type StreamAvatarAction =

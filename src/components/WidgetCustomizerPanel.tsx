@@ -47,6 +47,12 @@ interface WidgetCustomizerPanelProps {
   onAddSubathonTime: (sec: number, reason?: string) => void;
   onResetSubathon: (sec?: number) => void;
   onTriggerAvatarAction?: (action: 'idle' | 'dancing' | 'eating' | 'walk') => void;
+  onTriggerAvatarJump?: () => void;
+  onTriggerAvatarCheer?: () => void;
+  onTriggerAvatarGift?: () => void;
+  onTriggerFollow?: () => void;
+  onTriggerShare?: () => void;
+  onTriggerAvatarChat?: (text?: string) => void;
 }
 
 interface CategoryMeta {
@@ -165,6 +171,12 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
   onAddSubathonTime,
   onResetSubathon,
   onTriggerAvatarAction,
+  onTriggerAvatarJump,
+  onTriggerAvatarCheer,
+  onTriggerAvatarGift,
+  onTriggerFollow,
+  onTriggerShare,
+  onTriggerAvatarChat,
 }) => {
   // Determine which category to customize
   // If activeWidgetView is a specific widget, auto-select it. If 'all', default to current internal tab.
@@ -1195,6 +1207,12 @@ export const WidgetCustomizerPanel: React.FC<WidgetCustomizerPanelProps> = ({
             onUpdateSettings={onUpdateSettings}
             onCopyObsUrl={(type) => onCopyUrl(type as any)}
             onTriggerAvatarAction={onTriggerAvatarAction}
+            onTriggerAvatarJump={onTriggerAvatarJump}
+            onTriggerAvatarCheer={onTriggerAvatarCheer}
+            onTriggerAvatarGift={onTriggerAvatarGift}
+            onTriggerFollow={onTriggerFollow}
+            onTriggerShare={onTriggerShare}
+            onTriggerAvatarChat={onTriggerAvatarChat}
           />
         </div>
       )}
